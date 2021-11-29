@@ -48,12 +48,10 @@ class LoginScreen extends Component<any> {
 					.then((result) => {
 						console.log('User signed in');
 						//const user = db.collection("users").doc(result.user.uid);
-						if (result.additionalUserInfo.isNewUser) {
 							// user.set({
 							// 	displayName: result.additionalUserInfo.profile.given_name,
 							// 	dateCreated: Date.now(),
 							// })
-						}
 						// } else {
 						// 	user.update({
 						// 		lastLoggedIn: Date.now()
