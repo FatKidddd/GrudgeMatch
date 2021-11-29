@@ -1,0 +1,13 @@
+{
+  "files.exclude": {
+    ".expo": true,
+    "package-lock.json": true,
+    ".gitignore": true,
+    "babel.config.js": true,
+    "tsconfig.json": true,
+    "yarn.lock": true,
+    ".idea": true,
+    ".expo-shared": true,
+    ".vscode": true
+  }
+}

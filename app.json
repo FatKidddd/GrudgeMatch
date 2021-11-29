@@ -1,6 +1,11 @@
 {
   "expo": {
     "name": "GrudgeMatch",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "slug": "GrudgeMatch",
     "version": "1.0.0",
     "orientation": "portrait",
