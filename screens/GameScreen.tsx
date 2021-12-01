@@ -1,13 +1,28 @@
-import { Text, View } from 'native-base';
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { HomeStackScreenProps } from '../types';
+import { GolfGameScreen } from './games';
 
-const GameScreen = ({}: HomeStackScreenProps<'Game'>) => {
-  return (
-    <View>
-      <Text>Poop</Text>
-    </View>
-  );
+const GameScreen = (props: HomeStackScreenProps<'Game'>) => {
+  const { navigation, route } = props;
+
+  useEffect(() => {
+    if (!(route.params && route.params.gameId)) {
+      navigation.navigate("Games");
+    }
+  }, []);
+
+  const renderGame = (gameId: string) => {
+    switch (gameId) {
+      case "game1":
+        return <GolfGameScreen navigation={navigation}/>
+      case "game2":
+        return null;
+      default:
+        return null;
+    }
+  };
+
+  return renderGame(route.params.gameId);
 };
 
 export default GameScreen;

@@ -1,6 +1,7 @@
 function saveMiddleware({ dispatch }: any) {
     return (next: any) => {
         return async (action: any) => {
+            console.log(action);
             switch (action.type) {
                 default:
                     // console.log('.............');

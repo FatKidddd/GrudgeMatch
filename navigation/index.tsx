@@ -10,6 +10,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import GamesScreen from '../screens/GamesScreen';
 import GameScreen from '../screens/GameScreen';
+import { DrawerActions } from '@react-navigation/routers';
 
 import { RootStackParamList, HomeStackParamList, HomeStackScreenProps, RootDrawerParamList, RootStackScreenProps, RootDrawerScreenProps } from '../types';
 import LinkingConfiguration from './LinkingConfiguration';
@@ -28,7 +29,10 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      initialRouteName="Loading"
+      screenOptions={{ headerShown: false }}
+    >
       <Stack.Screen name="Root" component={DrawerNavigator} />
       <Stack.Screen name="Loading" component={LoadingScreen} />
       <Stack.Screen name="Auth" component={AuthScreen} />
@@ -41,9 +45,49 @@ const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 
 const HomeNavigator = () => {
   return (
-    <HomeStack.Navigator initialRouteName='Games'>
-      <HomeStack.Screen name="Games" component={GamesScreen} />
-      <HomeStack.Screen name="Game" component={GameScreen} />
+    <HomeStack.Navigator
+      initialRouteName='Games'
+      screenOptions={{ headerLeft: () => null }}
+    >
+      <HomeStack.Screen
+        name="Games"
+        component={GamesScreen}
+        options={({ navigation }: HomeStackScreenProps<'Games'>) => ({
+          headerLeft: () => (
+            <Pressable
+              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.5 : 1,
+              })}>
+              <FontAwesome
+                name="arrow-left"
+                size={25}
+                style={{ marginRight: 15 }}
+              />
+            </Pressable>
+          ),
+          gestureEnabled: false
+        })}
+      />
+      <HomeStack.Screen
+        name="Game"
+        component={GameScreen}
+        options={({ navigation }: HomeStackScreenProps<'Game'>) => ({
+          headerLeft: () => (
+            <Pressable
+              onPress={() => navigation.navigate('Games')}
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.5 : 1,
+              })}>
+              <FontAwesome
+                name="arrow-left"
+                size={25}
+                style={{ marginRight: 15 }}
+              />
+            </Pressable>
+          )
+        })}
+      />
     </HomeStack.Navigator>
   );
 };
@@ -58,20 +102,7 @@ function DrawerNavigator() {
         name="Home"
         component={HomeNavigator}
         options={({ navigation }: RootDrawerScreenProps<'Home'>) => ({
-          title: 'Games',
-          // headerRight: () => (
-          //   <Pressable
-          //     onPress={() => navigation.navigate('Modal')}
-          //     style={({ pressed }) => ({
-          //       opacity: pressed ? 0.5 : 1,
-          //     })}>
-          //     <FontAwesome
-          //       name="info-circle"
-          //       size={25}
-          //       style={{ marginRight: 15 }}
-          //     />
-          //   </Pressable>
-          // ),
+          headerShown: false
         })}
       />
       <Drawer.Screen name="Profile" component={ProfileScreen} />

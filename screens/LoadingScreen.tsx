@@ -4,10 +4,11 @@ import { View, Spinner } from 'native-base';
 import { RootStackScreenProps } from '../types';
 
 const LoadingScreen = ({ navigation }: RootStackScreenProps<'Loading'>) => {
-  const auth = getAuth();
 
   useEffect(() => {
+    const auth = getAuth();
     onAuthStateChanged(auth, async user => {
+      //console.log(user)
       if (user) {
         navigation.navigate('Root', {
           screen: 'Home',

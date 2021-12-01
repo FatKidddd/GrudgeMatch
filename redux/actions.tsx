@@ -1,4 +1,3 @@
-import { ADD_CATEGORY, DELETE_CATEGORY } from "./actionTypes";
+import { SET_ROOM_NAME } from "./actionTypes";
 
-export const addCategory = (category: Category) => ({ type: ADD_CATEGORY, payload: category });
-export const deleteCategory = (categoryId: string) => ({ type: DELETE_CATEGORY, payload: categoryId });
+export const setRoomName = (roomName: string) => ({ type: SET_ROOM_NAME, payload: roomName });

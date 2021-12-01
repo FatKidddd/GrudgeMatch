@@ -13,6 +13,8 @@ import Constants from 'expo-constants';
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
+import { SSRProvider } from '@react-aria/ssr';
+
 const firebaseConfig = {
   apiKey: "AIzaSyArYG40JyZ01TC1fC464x-VJ9_j2_5Bjl4",
   authDomain: "grudgematch-594b7.firebaseapp.com",
@@ -44,12 +46,14 @@ export default function App() {
   } else {
     return (
       <Provider store={store}>
-        <NativeBaseProvider>
-          <SafeAreaProvider>
-            <Navigation />
-            <StatusBar />
-          </SafeAreaProvider>
-        </NativeBaseProvider>
+        <SSRProvider>
+          <NativeBaseProvider>
+            <SafeAreaProvider>
+              <Navigation />
+              <StatusBar />
+            </SafeAreaProvider>
+          </NativeBaseProvider>
+        </SSRProvider>
       </Provider>
     );
   }

@@ -1,12 +1,6 @@
-/**
- * Learn more about using TypeScript with React Navigation:
- * https://reactnavigation.org/docs/typescript/
- */
-
 //import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { DrawerScreenProps } from '@react-navigation/drawer';
 
 declare global {
   namespace ReactNavigation {
@@ -56,7 +50,9 @@ export type RootDrawerScreenProps<Screen extends keyof RootDrawerParamList> = Co
 
 export type HomeStackParamList = {
   Games: undefined;
-  Game: undefined;
+  Game: {
+    gameId: string;
+  };
 };
 
 export type HomeStackScreenProps<Screen extends keyof HomeStackParamList> = NativeStackScreenProps<
@@ -64,43 +60,62 @@ export type HomeStackScreenProps<Screen extends keyof HomeStackParamList> = Nati
   Screen
 >;
 
-interface User {
+export interface User {
   id: String;
   name: String;
-  sportIds: Array<String>
   pastGames: {
-    sportId1: Array<gameId>
-    ...
+    [gameId: string]: Array<String>;
   }
 };
 
-interface Sport {
+export interface Game {
   id: String;
   name: String;
   pictureUrl: String;
 };
 
-interface UserGolfGame extends Game {
-  id: String;
-  userId: String;
-  strokes: Array<Number>
-  parArr: Array<Number>
-  handicapIndexArr: Array<Number>
-  strokesCount?: Number;
-  parCount?: Number;
-  birdieCount?: Number;
-  location?: String;
-  difficulty?: Number;
-};
 
 // Game refers to one room of multiple people
-interface Game {
-  id: String;
-  userIds: Array<String>
-  dateCreated: Number
-  sportId: String;
+export interface Room {
+  userIds: Array<String>;
+  dateCreated: Date;
+  gameId: String;
+  gameOwnerUserId: String;
+  bannedUserIds: Array<String>;
 
   // or qrcode
-  gameCode: String
-  password: String
+  //room name is now id roomName: String;
+  password: String;
+};
+
+// possible to create two rooms with exact same name by sending at the same time?
+
+// cant think of a better variable name because the game and room are interlinked
+export interface GolfGame extends Room {
+  location?: String;
+  course?: String;
+  difficulty?: Number;
+  parArr?: Array<Number>;
+  handicapIndexArr?: Array<Number>;
+  usersStrokes: {
+    [userId: string]: Array<Number>;
+  }
+  usersStrokesParBirdieCount: {
+    [userId: string]: [Number, Number, Number];
+  }
+  pointsArr: {
+    // userId1 + '-' + userId2
+    [userPairId: string]: {
+      give: Boolean | true;
+      frontCount: Number | 0;
+      backCount: Number | 0;
+      netPoints: Number | 0;
+    };
+  };
+
+  winnerId?: String;
+
+  frontBetAmount?: Number | 5;
+  backBetAmount?: Number | 10;
+  betIsSingleHole?: Boolean | true;
 };

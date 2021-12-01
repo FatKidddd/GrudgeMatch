@@ -1,7 +1,5 @@
 import { combineReducers } from 'redux';
-import categoriesReducer from './categories';
-import colorsReducer from './colors';
-import infoReducer from './info';
+import userInfoReducer from './userInfo';
 
-export const rootReducer = combineReducers({ categoriesReducer, colorsReducer, infoReducer });
+export const rootReducer = combineReducers({ userInfoReducer });
 export type RootState = ReturnType<typeof rootReducer>;
