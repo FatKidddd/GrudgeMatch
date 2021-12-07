@@ -1,4 +1,4 @@
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -59,8 +59,8 @@ const HomeNavigator = () => {
               style={({ pressed }) => ({
                 opacity: pressed ? 0.5 : 1,
               })}>
-              <FontAwesome
-                name="arrow-left"
+              <Ionicons
+                name="md-menu"
                 size={25}
                 style={{ marginRight: 15 }}
               />
@@ -80,8 +80,8 @@ const HomeNavigator = () => {
                 opacity: pressed ? 0.5 : 1,
               })}>
               <FontAwesome
-                name="arrow-left"
-                size={25}
+                name="chevron-left"
+                size={20}
                 style={{ marginRight: 15 }}
               />
             </Pressable>

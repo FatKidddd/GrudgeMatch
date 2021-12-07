@@ -8,14 +8,10 @@ import { TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import gamesData from "../../gamesData";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useAppDispatch } from "../../hooks/selectorAndDispatch";
-import { setRoomName } from '../../redux/actions';
+import { useAppDispatch, useAppSelector } from "../../hooks/selectorAndDispatch";
+import { setReduxRoomName } from '../../redux/actions';
 
-interface RoomModalButtonsProp {
-  setInRoom: (bool: boolean) => void;
-};
-
-const RoomModalButtons = ({ setInRoom }: RoomModalButtonsProp) => {
+const RoomModalButtons = () => {
   const dispatch = useAppDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [show, setShow] = useState(false);
@@ -31,6 +27,8 @@ const RoomModalButtons = ({ setInRoom }: RoomModalButtonsProp) => {
   const handleRoomError = () => setErrorIsOpen(true);
 
   const handleCreateRoom = () => {
+    if (!(roomName.length > 0 && roomName.length < 30)) return handleRoomError();
+
     const db = getFirestore();
     const roomRef = doc(db, 'rooms', roomName);
 
@@ -71,20 +69,36 @@ const RoomModalButtons = ({ setInRoom }: RoomModalButtonsProp) => {
       });
   };
 
-  const handleJoinRoom = async () => {
+  const handleJoinRoom = () => {
     const db = getFirestore();
     const roomRef = doc(db, 'rooms', roomName);
     const auth = getAuth();
     const userId = auth.currentUser?.uid;
     if (!userId) return handleRoomError();
 
-    await updateDoc(roomRef, {
-      userIds: arrayUnion(userId)
-    });
+    getDoc(roomRef)
+      .then(async res => {
+        const data = res.data();
+        if (data?.password === password) {
+          // update room
+          await updateDoc(roomRef, {
+            userIds: arrayUnion(userId),
+            [`usersStrokes.${userId}`]: new Array(18).fill(null)
+          });
 
-    dispatch(setRoomName(roomName));
-
-    setInRoom(true);
+          // update user
+          const userRef = doc(db, 'users', userId);
+          await updateDoc(userRef, {
+            roomName
+          });
+          setShow(false);
+        } else {
+          handleRoomError();
+        }
+      })
+      .catch(err => {
+        console.error(err);
+      });
   };
 
   // add text limit
@@ -101,7 +115,7 @@ const RoomModalButtons = ({ setInRoom }: RoomModalButtonsProp) => {
             <Modal.CloseButton />
             <Modal.Header>Create room</Modal.Header>
             <Modal.Body>
-              {/* Create room for all your friends to join! */}
+              You need to create a room for every golf course.
               <FormControl mt="3">
                 <FormControl.Label>Room Name</FormControl.Label>
                 <Input value={roomName} onChangeText={val => setRoomName(val)}/>
@@ -134,7 +148,6 @@ const RoomModalButtons = ({ setInRoom }: RoomModalButtonsProp) => {
             <Modal.CloseButton />
             <Modal.Header>Join room</Modal.Header>
             <Modal.Body>
-              {/* Create room for all your friends to join! */}
               <FormControl mt="3">
                 <FormControl.Label>Room Name</FormControl.Label>
                 <Input value={roomName} onChangeText={val => setRoomName(val)}/>
@@ -201,26 +214,54 @@ const RoomModalButtons = ({ setInRoom }: RoomModalButtonsProp) => {
   )
 };
 
+interface GolfGameScreenProps {
+  navigation: NativeStackNavigationProp<HomeStackParamList, 'Game'>;
+};
+
 // shows history of games and join room buttons
-const GolfGameScreen = ({ navigation }: { navigation: NativeStackNavigationProp<HomeStackParamList, 'Game'> }) => {
-  const [inRoom, setInRoom] = useState(false);
+const GolfGameScreen = ({ navigation }: GolfGameScreenProps) => {
+  const auth = getAuth();
+  if (!auth.currentUser) return null;
+  
+  const user = auth.currentUser;
+  const db = getFirestore();
+
+
+  const userRef = doc(db, 'users', user.uid);
+
+  // const roomName = useAppSelector(state => state.userInfoReducer.roomName);
+  // const dispatch = useAppDispatch();
+
+  const [roomName, setRoomName] = useState("");
 
   useEffect(() => {
-    const auth = getAuth();
-    if (!auth.currentUser) return;
-    
-    const user = auth.currentUser;
-    const db = getFirestore();
-
-    navigation.setOptions({
-      headerRight: () => <RoomModalButtons setInRoom={setInRoom} />
+    const unsubscribe = onSnapshot(userRef, async (res) => {
+      const data = res.data();
+      //dispatch(setReduxRoomName(data?.roomName ? data.roomName : ""));
+      setRoomName(data?.roomName ? data.roomName : "");
     });
+
+    return function cleanup() {
+      unsubscribe();
+    }
   }, []);
+
+  useEffect(() => {
+    if (roomName.length === 0) {
+      navigation.setOptions({
+        headerRight: () => <RoomModalButtons />
+      });
+    } else {
+      navigation.setOptions({
+        headerRight: () => null
+      });
+    }
+  }, [roomName]);
 
   return (
     <Center flex={1}>
-      {inRoom
-        ? <GolfRoomScreen setInRoom={setInRoom} />
+      {roomName.length > 0
+        ? <GolfRoomScreen roomName={roomName} />
         : <Box>
           <Text>Cock</Text>
         </Box>

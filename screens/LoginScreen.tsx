@@ -3,6 +3,7 @@ import { Text, View, TouchableOpacity, TextInput, ActivityIndicator, Alert, Styl
 import { Ionicons } from '@expo/vector-icons';
 import { GoogleAuthProvider, onAuthStateChanged, signInWithCredential, getAuth, UserCredential } from 'firebase/auth';
 import * as Google from 'expo-google-app-auth';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 
 const IOS_CLIENT_ID = "446448293024-9u0b4sak30e4deqj5eaaan3og5ancs9j.apps.googleusercontent.com";
 //const ANDROID_CLIENT_ID = "446448293024-rgm2vttk81voqpjmdbm25ctrdie00bkd.apps.googleusercontent.com";
@@ -47,16 +48,18 @@ class LoginScreen extends Component<any> {
 				signInWithCredential(auth, credential)
 					.then((result) => {
 						console.log('User signed in');
-						//const user = db.collection("users").doc(result.user.uid);
-							// user.set({
-							// 	displayName: result.additionalUserInfo.profile.given_name,
-							// 	dateCreated: Date.now(),
-							// })
-						// } else {
-						// 	user.update({
-						// 		lastLoggedIn: Date.now()
-						// 	})
-						// }
+
+            const db = getFirestore();
+            const userRef = doc(db, 'users', result.user.uid);
+            getDoc(userRef)
+              .then(res => {
+                if (!res.exists()) {
+                  setDoc(userRef, {
+                    name: result.user.displayName,
+                    roomName: ""
+                  });
+                }
+              });
 					})
 					.catch(error => {
 						// Handle Errors here.

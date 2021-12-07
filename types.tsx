@@ -91,6 +91,14 @@ export interface Room {
 // possible to create two rooms with exact same name by sending at the same time?
 
 // cant think of a better variable name because the game and room are interlinked
+export type Stroke = Number | null;
+
+export type GolfStrokes = [
+  Stroke, Stroke, Stroke, Stroke, Stroke, Stroke,
+  Stroke, Stroke, Stroke, Stroke, Stroke, Stroke,
+  Stroke, Stroke, Stroke, Stroke, Stroke, Stroke
+];
+
 export interface GolfGame extends Room {
   location?: String;
   course?: String;
@@ -98,7 +106,7 @@ export interface GolfGame extends Room {
   parArr?: Array<Number>;
   handicapIndexArr?: Array<Number>;
   usersStrokes: {
-    [userId: string]: Array<Number>;
+    [userId: string]: GolfStrokes;
   }
   usersStrokesParBirdieCount: {
     [userId: string]: [Number, Number, Number];

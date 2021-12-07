@@ -11,7 +11,6 @@ import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
 
 import { SSRProvider } from '@react-aria/ssr';
 
