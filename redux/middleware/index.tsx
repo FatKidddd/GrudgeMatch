@@ -4,10 +4,10 @@ function saveMiddleware({ dispatch }: any) {
             //console.log(action);
             switch (action.type) {
                 default:
-                    // console.log('.............');
-                    // console.log(action.type);
-                    // console.log(action.payload);
-                    // console.log('.............');
+                    console.log('.............');
+                    console.log(action.type);
+                    console.log(action.payload);
+                    console.log('.............');
                     break;
             }
             return next(action);

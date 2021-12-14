@@ -61,37 +61,41 @@ export type HomeStackScreenProps<Screen extends keyof HomeStackParamList> = Nati
 >;
 
 export interface User {
-  id: String;
-  name: String;
-  pastGames: {
-    [gameId: string]: Array<String>;
-  }
+  id: string;
+  name: string;
+  roomName: string;
+  pictureUrl?: string;
+  // pastGames: {
+  //   [gameId: string]: Array<string>;
+  // }
 };
 
 export interface Game {
-  id: String;
-  name: String;
-  pictureUrl: String;
+  id: string;
+  name: string;
+  pictureUrl: string;
 };
 
 
 // Game refers to one room of multiple people
 export interface Room {
-  userIds: Array<String>;
+  userIds: Array<string>;
   dateCreated: Date;
-  gameId: String;
-  gameOwnerUserId: String;
-  bannedUserIds: Array<String>;
+  gameId: string;
+  gameOwnerUserId: string;
+  bannedUserIds: Array<string>;
 
   // or qrcode
-  //room name is now id roomName: String;
-  password: String;
+  //room name is now id roomName: string;
+  password: string;
+
+  prepDone: boolean;
 };
 
 // possible to create two rooms with exact same name by sending at the same time?
 
 // cant think of a better variable name because the game and room are interlinked
-export type Stroke = Number | null;
+export type Stroke = number | null;
 
 export type GolfStrokes = [
   Stroke, Stroke, Stroke, Stroke, Stroke, Stroke,
@@ -99,31 +103,41 @@ export type GolfStrokes = [
   Stroke, Stroke, Stroke, Stroke, Stroke, Stroke
 ];
 
+export interface HandicapInfo {
+  give: boolean;
+  frontCount: number;
+  backCount: number;
+  locked: boolean;
+};
+
 export interface GolfGame extends Room {
-  location?: String;
-  course?: String;
-  difficulty?: Number;
-  parArr?: Array<Number>;
-  handicapIndexArr?: Array<Number>;
+  golfCourseId?: string;
+
   usersStrokes: {
     [userId: string]: GolfStrokes;
   }
   usersStrokesParBirdieCount: {
-    [userId: string]: [Number, Number, Number];
+    [userId: string]: [number, number, number];
   }
   pointsArr: {
     // userId1 + '-' + userId2
-    [userPairId: string]: {
-      give: Boolean | true;
-      frontCount: Number | 0;
-      backCount: Number | 0;
-      netPoints: Number | 0;
-    };
+    [userPairId: string]: HandicapInfo;
   };
+  holeNumber: number;
 
-  winnerId?: String;
+  winnerId?: string;
 
-  frontBetAmount?: Number | 5;
-  backBetAmount?: Number | 10;
-  betIsSingleHole?: Boolean | true;
+  frontBetAmount?: number;
+  backBetAmount?: number;
+  betIsSingleHole?: boolean;
+
+};
+
+export interface GolfCourse {
+  id: string;
+  location: string;
+  name: string;
+  difficulty?: number;
+  parArr: Array<number>;
+  handicapIndexArr: Array<number>;
 };

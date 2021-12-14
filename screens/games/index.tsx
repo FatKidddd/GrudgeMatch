@@ -1,3 +1,3 @@
-import GolfGameScreen from "./GolfGameScreen";
+import GolfGameScreen from "./golf/GolfGameScreen";
 
 export { GolfGameScreen };

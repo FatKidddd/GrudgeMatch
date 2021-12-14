@@ -3,16 +3,16 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore, getDoc, collection, query, orderBy, limit, startAfter, onSnapshot, doc, getDocs, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import GolfRoomScreen from './GolfRoomScreen';
 import { Modal, Button, Input, VStack, Text, FormControl, Box, Center, NativeBaseProvider, Tooltip, AlertDialog, HStack, Link } from "native-base"
-import { GolfGame, HomeStackParamList, HomeStackScreenProps } from "../../types";
+import { GolfGame, HomeStackParamList, HomeStackScreenProps } from "../../../types";
 import { TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import gamesData from "../../gamesData";
+import gamesData from "../../../gamesData";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useAppDispatch, useAppSelector } from "../../hooks/selectorAndDispatch";
-import { setReduxRoomName } from '../../redux/actions';
+import { useAppDispatch, useAppSelector } from "../../../hooks/selectorAndDispatch";
+//import { setReduxRoomName } from '../../../redux/actions';
 
 const RoomModalButtons = () => {
-  const dispatch = useAppDispatch();
+  //const dispatch = useAppDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [show, setShow] = useState(false);
   const [roomName, setRoomName] = useState("");
@@ -51,7 +51,9 @@ const RoomModalButtons = () => {
           password,
           usersStrokes: {},
           usersStrokesParBirdieCount: {},
-          pointsArr: {}
+          pointsArr: {},
+          prepDone: false,
+          holeNumber: 1
         };
 
         setDoc(roomRef, golfGame)
@@ -226,7 +228,6 @@ const GolfGameScreen = ({ navigation }: GolfGameScreenProps) => {
   const user = auth.currentUser;
   const db = getFirestore();
 
-
   const userRef = doc(db, 'users', user.uid);
 
   // const roomName = useAppSelector(state => state.userInfoReducer.roomName);
@@ -247,15 +248,9 @@ const GolfGameScreen = ({ navigation }: GolfGameScreenProps) => {
   }, []);
 
   useEffect(() => {
-    if (roomName.length === 0) {
-      navigation.setOptions({
-        headerRight: () => <RoomModalButtons />
-      });
-    } else {
-      navigation.setOptions({
-        headerRight: () => null
-      });
-    }
+    navigation.setOptions({
+      headerRight: () => roomName.length ? null : <RoomModalButtons />
+    });
   }, [roomName]);
 
   return (

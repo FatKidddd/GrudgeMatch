@@ -6,7 +6,7 @@ import * as Google from 'expo-google-app-auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 
 const IOS_CLIENT_ID = "446448293024-9u0b4sak30e4deqj5eaaan3og5ancs9j.apps.googleusercontent.com";
-//const ANDROID_CLIENT_ID = "446448293024-rgm2vttk81voqpjmdbm25ctrdie00bkd.apps.googleusercontent.com";
+const ANDROID_CLIENT_ID = "446448293024-dqp1c1vjankcc1fqhh6t8j1f2omak51h.apps.googleusercontent.com";
 
 class LoginScreen extends Component<any> {
 	constructor(props: any) {
@@ -97,7 +97,7 @@ class LoginScreen extends Component<any> {
 		try {
 			const result = await Google.logInAsync({
         behavior: 'web',
-				//androidClientId: ANDROID_CLIENT_ID,
+				androidClientId: ANDROID_CLIENT_ID,
 				iosClientId: IOS_CLIENT_ID,
 				scopes: ['profile', 'email'],
 			});
