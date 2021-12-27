@@ -5,8 +5,8 @@ import { Box, FlatList, Heading, Avatar, HStack, VStack, Text, Spacer, Center, B
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAppDispatch, useAppSelector } from '../../../hooks/selectorAndDispatch';
-import { setUser } from '../../../redux/actions';
+import { GolfArray } from '../../../components';
+import userSelector from '../../../utils/userUtils';
 
 interface GolfPrepScreenProps {
   userId: string | undefined;
@@ -108,8 +108,8 @@ interface HandicapRowProps {
 const HandicapRow = React.memo(({ user, otherUser, flipped, pairId, handicapInfo, roomName }: HandicapRowProps) => {
   const giveOrTake = (Number(handicapInfo.give) ^ Number(flipped)) ? 'Give' : 'Take';
 
-  const [frontVal, setFrontVal] = useState(handicapInfo.frontCount);
-  const [backVal, setBackVal] = useState(handicapInfo.backCount);
+  const [frontVal, setFrontVal] = useState(Number(handicapInfo.frontCount));
+  const [backVal, setBackVal] = useState(Number(handicapInfo.backCount));
 
   const db = getFirestore();
   const roomRef = doc(db, 'rooms', roomName);
@@ -122,8 +122,11 @@ const HandicapRow = React.memo(({ user, otherUser, flipped, pairId, handicapInfo
   };
 
   const handleInputSubmit = async (frontOrBackCount: "frontCount" | "backCount") => {
+    const checkNumberInRange = (num: number) => 0 <= num && num <= 9;
+    if (!checkNumberInRange(frontVal) || !checkNumberInRange(backVal)) return;
+    //console.log(frontVal, backVal)
     await updateDoc(roomRef, {
-      [`pointsArr.${pairId}.${frontOrBackCount}`]: frontVal
+      [`pointsArr.${pairId}.${frontOrBackCount}`]: frontOrBackCount === "frontCount" ? frontVal : backVal
     });
   };
 
@@ -145,6 +148,20 @@ const HandicapRow = React.memo(({ user, otherUser, flipped, pairId, handicapInfo
         <Center flex={1}>
           <Text numberOfLines={1}>{flipped ? otherUser.name : user.name}</Text>
           {/* add image */}
+        </Center>
+        <Box marginX={4}>
+          <Text>vs</Text>
+        </Box>
+        <Center flex={1}>
+          <Text numberOfLines={1}>{!flipped ? otherUser.name : user.name}</Text>
+        </Center>
+      </HStack>
+
+      <HStack alignItems='center' flex={1}>
+        <Box flex={1}>
+          <Button onPress={handleGiveOrTake} disabled={handicapInfo.locked} variant="subtle">{giveOrTake}</Button>
+        </Box>
+        <HStack flex={2} justifyContent={'space-evenly'}>
           <Input
             value={frontVal ? frontVal.toString() : undefined}
             onChangeText={text => handleInputChange("frontCount", text)}
@@ -155,12 +172,6 @@ const HandicapRow = React.memo(({ user, otherUser, flipped, pairId, handicapInfo
             rounded={10}
             textAlign={'center'}
           />
-        </Center>
-        <Center marginX={4}>
-          <Text>vs</Text>
-        </Center>
-        <Center flex={1}>
-          <Text numberOfLines={1}>{!flipped ? otherUser.name : user.name}</Text>
           <Input
             value={backVal ? backVal.toString() : undefined}
             onChangeText={text => handleInputChange("backCount", text)}
@@ -171,14 +182,12 @@ const HandicapRow = React.memo(({ user, otherUser, flipped, pairId, handicapInfo
             rounded={10}
             textAlign={'center'}
           />
-        </Center>
-      </HStack>
-
-      <HStack width="100%" justifyContent={"space-between"} alignItems={"center"}>
-        <Button onPress={handleGiveOrTake} disabled={handicapInfo.locked} variant="subtle">{giveOrTake}</Button>
-        <TouchableOpacity onPress={handleLock}>
-          <Ionicons name={handicapInfo.locked ? "md-lock-closed-outline" : "md-lock-open-outline"} size={30} />
-        </TouchableOpacity>
+        </HStack>
+        <Box>
+          <TouchableOpacity onPress={handleLock}>
+            <Ionicons name={handicapInfo.locked ? "md-lock-closed" : "md-lock-open-outline"} size={30} />
+          </TouchableOpacity>
+        </Box>
       </HStack>
     </Center>
   );
@@ -206,26 +215,6 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
       });
   }, [room.golfCourseId]);
 
-  const users = useAppSelector(state => state.usersReducer);
-  const dispatch = useAppDispatch();
-
-  const getUser = async (uid: string) => {
-    // memoization
-    const userRef = doc(db, 'users', uid);
-    getDoc(userRef)
-      .then(res => {
-        const data = {
-          id: uid,
-          ...res.data()
-        } as User;
-        dispatch(setUser(data));
-      })
-      .catch(err => {
-        console.log("Failed to get user profile with id ", uid);
-        console.error(err);
-      });
-  };
-
   const handleStart = () => {
     const req = room.userIds.length * (room.userIds.length - 1) / 2;
     let count = 0;
@@ -248,12 +237,6 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
       });
   }
 
-  const userSelector = (uid: string) => {
-    if (users[uid]) return users[uid];
-    getUser(uid);
-    return { id: "", name: "Unknown", roomName: "" };
-  };
-
   const renderItem = ({ item }: { item: string }) => {
     if (!userId) return null;
     const id = item;
@@ -273,33 +256,16 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
     return <HandicapRow {...handicapRowProps} />;
   };
 
-  const renderArr = (text: string, arr: Array<number>) => {
-    if (!arr || arr.length != 18) return null;
-    return (
-      <HStack>
-        <Center width={90} alignItems={"flex-end"} paddingRight={2}>
-          <Text>{text}</Text>
-        </Center>
-        {arr.map((num, i) => (
-          <Center key={i} width="30" height="30" bg="blue.100">
-            <Text>{num}</Text>
-          </Center>
-        ))}
-      </HStack>
-    );
-  };
+  const len = room.userIds.length;
+  let cnt = 0;
+  for (const [key, val] of Object.entries(room.pointsArr))
+    if (val.locked)
+      cnt++;
+  const isReady = len * (len - 1) / 2 === cnt;
 
   return (
     <VStack bg="green.100" flex={1}>
-      <Box paddingY={5}>
-        <ScrollView horizontal>
-          <VStack>
-            <Box marginBottom={"5"}>{renderArr("Holes:", Array.from({length: 18}, (_, i) => i + 1))}</Box>
-            <Box>{renderArr("Par:", course.parArr)}</Box>
-            <Box>{renderArr("Handicap:", course.handicapIndexArr)}</Box>
-          </VStack>
-        </ScrollView>
-      </Box>
+      <GolfArray course={course}/>
       <Box flex={1}>
         <FlatList
           data={room.userIds.filter(uid => uid != userId)}
@@ -308,12 +274,15 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
           bgColor={"blue.100"}
         />
       </Box>
-      <Box>
-          {userId === room.gameOwnerUserId
-          ? <Button onPress={handleStart}>Start game</Button>
+      <Center>
+        {userId === room.gameOwnerUserId
+          ?
+          isReady
+            ? <Button onPress={handleStart}>Start game</Button>
+            : <Text>Make sure all give and takes are locked</Text>
           : <Text>Wait for room owner to start game</Text>
         }
-      </Box>
+      </Center>
     </VStack>
   );
 };

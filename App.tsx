@@ -40,22 +40,20 @@ export default function App() {
   // console.log(Application.applicationId)
   // console.log(Application.applicationName)
   // console.log(Constants.manifest)
-  if (!isLoadingComplete) {
+  if (!isLoadingComplete)
     return null;
-  } else {
-    return (
-      <Provider store={store}>
-        <SSRProvider>
-          <NativeBaseProvider>
-            <SafeAreaProvider>
-              <Navigation />
-              <StatusBar />
-            </SafeAreaProvider>
-          </NativeBaseProvider>
-        </SSRProvider>
-      </Provider>
-    );
-  }
+  return (
+    <Provider store={store}>
+      <SSRProvider>
+        <NativeBaseProvider>
+          <SafeAreaProvider>
+            <Navigation />
+            <StatusBar />
+          </SafeAreaProvider>
+        </NativeBaseProvider>
+      </SSRProvider>
+    </Provider>
+  );
 };
 
 
