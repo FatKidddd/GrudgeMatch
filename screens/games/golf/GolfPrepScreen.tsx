@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { getDoc, updateDoc, getDocs, getFirestore, collection, doc, addDoc } from 'firebase/firestore';
 import { User, GolfCourse, GolfGame, HandicapInfo } from '../../../types';
-import { Box, FlatList, Heading, Avatar, HStack, VStack, Text, Spacer, Center, Button, Input, Pressable } from "native-base";
+import { Box, FlatList, Heading, Avatar, HStack, VStack, Text, Spacer, Center, Button, Input, Pressable, ScrollView } from "native-base";
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -140,44 +140,47 @@ const HandicapRow = React.memo(({ user, otherUser, flipped, pairId, handicapInfo
   };
 
   return (
-    <VStack>
-      <HStack>
-        <Box>
-          <Text>{flipped ? otherUser.name : user.name}</Text>
+    <Center bg="green.100" padding={15} rounded="20" marginTop={5}>
+      <HStack flex={1} bg="white" paddingY={3}>
+        <Center flex={1}>
+          <Text numberOfLines={1}>{flipped ? otherUser.name : user.name}</Text>
           {/* add image */}
-        </Box>
-        <Text marginX={4}>vs</Text>
-        <Box>
-          <Text>{!flipped ? otherUser.name : user.name}</Text>
-        </Box>
-      </HStack>
-      <HStack>
-        <TouchableOpacity onPress={handleGiveOrTake} disabled={handicapInfo.locked}>
-          <Box>
-            <Text>{giveOrTake}</Text>
-          </Box>
-        </TouchableOpacity>
-        <Box>
           <Input
             value={frontVal ? frontVal.toString() : undefined}
             onChangeText={text => handleInputChange("frontCount", text)}
             onEndEditing={() => handleInputSubmit("frontCount")}
             editable={!handicapInfo.locked}
+            size={16}
+            fontSize={20}
+            rounded={10}
+            textAlign={'center'}
           />
-        </Box>
-        <Box>
+        </Center>
+        <Center marginX={4}>
+          <Text>vs</Text>
+        </Center>
+        <Center flex={1}>
+          <Text numberOfLines={1}>{!flipped ? otherUser.name : user.name}</Text>
           <Input
             value={backVal ? backVal.toString() : undefined}
             onChangeText={text => handleInputChange("backCount", text)}
             onEndEditing={() => handleInputSubmit("backCount")}
             editable={!handicapInfo.locked}
+            size={16}
+            fontSize={20}
+            rounded={10}
+            textAlign={'center'}
           />
-        </Box>
+        </Center>
+      </HStack>
+
+      <HStack width="100%" justifyContent={"space-between"} alignItems={"center"}>
+        <Button onPress={handleGiveOrTake} disabled={handicapInfo.locked} variant="subtle">{giveOrTake}</Button>
         <TouchableOpacity onPress={handleLock}>
           <Ionicons name={handicapInfo.locked ? "md-lock-closed-outline" : "md-lock-open-outline"} size={30} />
         </TouchableOpacity>
       </HStack>
-    </VStack>
+    </Center>
   );
 });
 
@@ -270,46 +273,59 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
     return <HandicapRow {...handicapRowProps} />;
   };
 
-  const renderArr = (arr: Array<number>) => {
+  const renderArr = (text: string, arr: Array<number>) => {
     if (!arr || arr.length != 18) return null;
     return (
       <HStack>
+        <Center width={90} alignItems={"flex-end"} paddingRight={2}>
+          <Text>{text}</Text>
+        </Center>
         {arr.map((num, i) => (
-          <Box key={i}>
+          <Center key={i} width="30" height="30" bg="blue.100">
             <Text>{num}</Text>
-          </Box>
+          </Center>
         ))}
       </HStack>
     );
   };
 
   return (
-    <SafeAreaView>
-      <Box>{renderArr(course.parArr)}</Box>
-      <Box>{renderArr(course.handicapIndexArr)}</Box>
-      <FlatList
-        data={room.userIds.filter(uid => uid != userId)}
-        renderItem={renderItem}
-        keyExtractor={(item) => item} // since the item is the user id itself
-      />
-      {userId === room.gameOwnerUserId
-        ? <Button onPress={handleStart}>Start game</Button>
+    <VStack bg="green.100" flex={1}>
+      <Box paddingY={5}>
+        <ScrollView horizontal>
+          <VStack>
+            <Box marginBottom={"5"}>{renderArr("Holes:", Array.from({length: 18}, (_, i) => i + 1))}</Box>
+            <Box>{renderArr("Par:", course.parArr)}</Box>
+            <Box>{renderArr("Handicap:", course.handicapIndexArr)}</Box>
+          </VStack>
+        </ScrollView>
+      </Box>
+      <Box flex={1}>
+        <FlatList
+          data={room.userIds.filter(uid => uid != userId)}
+          renderItem={renderItem}
+          keyExtractor={(item) => item} // since the item is the user id itself
+          bgColor={"blue.100"}
+        />
+      </Box>
+      <Box>
+          {userId === room.gameOwnerUserId
+          ? <Button onPress={handleStart}>Start game</Button>
           : <Text>Wait for room owner to start game</Text>
-      }
-    </SafeAreaView>
+        }
+      </Box>
+    </VStack>
   );
 };
 
 const GolfPrepScreen = (props: GolfPrepScreenProps) => {
   return (
-    <Center>
-      <Box width={"100%"}>
-        {props.room.golfCourseId
-          ? <GolfHandicapScreen {...props} /> 
-          : <GolfCourseScreen {...props} />
-        }
-      </Box>
-    </Center>
+    <Box flex={1}>
+      {props.room.golfCourseId
+        ? <GolfHandicapScreen {...props} /> 
+        : <GolfCourseScreen {...props} />
+      }
+    </Box>
   );
 };
 

@@ -65,9 +65,9 @@ export interface User {
   name: string;
   roomName: string;
   pictureUrl?: string;
-  // pastGames: {
-  //   [gameId: string]: Array<string>;
-  // }
+  // collection pastGames 
+    // with game / sportId as document 
+      // and collection of past rooms
 };
 
 export interface Game {
@@ -84,6 +84,7 @@ export interface Room {
   gameId: string;
   gameOwnerUserId: string;
   bannedUserIds: Array<string>;
+  gameEnded: boolean;
 
   // or qrcode
   //room name is now id roomName: string;
@@ -140,4 +141,8 @@ export interface GolfCourse {
   difficulty?: number;
   parArr: Array<number>;
   handicapIndexArr: Array<number>;
+};
+
+export interface Games {
+  "game1": GolfGame;
 };

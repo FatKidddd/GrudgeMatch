@@ -53,7 +53,8 @@ const RoomModalButtons = () => {
           usersStrokesParBirdieCount: {},
           pointsArr: {},
           prepDone: false,
-          holeNumber: 1
+          holeNumber: 1,
+          gameEnded: false
         };
 
         setDoc(roomRef, golfGame)
@@ -81,7 +82,7 @@ const RoomModalButtons = () => {
     getDoc(roomRef)
       .then(async res => {
         const data = res.data();
-        if (data?.password === password) {
+        if (data?.password && data?.password === password) {
           // update room
           await updateDoc(roomRef, {
             userIds: arrayUnion(userId),
@@ -256,9 +257,8 @@ const GolfGameScreen = ({ navigation }: GolfGameScreenProps) => {
   return (
     <Center flex={1}>
       {roomName.length > 0
-        ? <GolfRoomScreen roomName={roomName} />
+        ? <GolfRoomScreen roomName={roomName} navigation={navigation}/>
         : <Box>
-          <Text>Cock</Text>
         </Box>
       }
     </Center>

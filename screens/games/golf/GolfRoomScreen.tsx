@@ -4,11 +4,14 @@ import { Picker } from '@react-native-picker/picker';
 import { Text, Popover, Button, Center, Box, AlertDialog, HStack, Input, ScrollView, VStack } from "native-base";
 import { TouchableOpacity } from 'react-native';
 import { Entypo, Ionicons } from '@expo/vector-icons';
-import { getFirestore, doc, updateDoc, arrayRemove, onSnapshot, collection, deleteField, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, collection, deleteField, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useAppSelector } from '../../../hooks/selectorAndDispatch';
-import { GolfGame, GolfStrokes } from '../../../types';
+import { GolfGame, GolfStrokes, HomeStackParamList } from '../../../types';
 import GolfPrepScreen from './GolfPrepScreen';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RoomDetails } from '../../../components';
+import UsersBar from '../../../components/UsersBar';
 
 // leave room function
 
@@ -74,28 +77,17 @@ const TransitionScoreboard = ({ userId, room, showScores, setShowTransitionScore
 
 interface GolfRoomScreenProps {
   roomName: string;
+  navigation: NativeStackNavigationProp<HomeStackParamList, "Game">;
 };
 
 // may change usersStrokes to be a collection with multiple listeners to each player for scalability.
 // for now its just a more quick to implement solution
-const GolfRoomScreen = ({ roomName }: GolfRoomScreenProps) => {
+const GolfRoomScreen = ({ roomName, navigation }: GolfRoomScreenProps) => {
   const db = getFirestore();
   const auth = getAuth();
   const userId = auth.currentUser?.uid;
   const roomRef = doc(db, 'rooms', roomName);
-
-  const handleLeave = async () => {
-    if (!userId) return null;
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(roomRef, {
-      userIds: arrayRemove(userId),
-      [`usersStrokes.${userId}`]: deleteField()
-    });
-    await updateDoc(userRef, {
-      roomName: ""
-    });
-  };
-
+  const [showTransitionScoreboard, setShowTransitionScoreboard] = useState(false);
   const [room, setRoom] = useState({
     userIds: [],
     dateCreated: new Date(),
@@ -103,6 +95,7 @@ const GolfRoomScreen = ({ roomName }: GolfRoomScreenProps) => {
     gameOwnerUserId: "",
     bannedUserIds: [],
     password: "",
+    gameEnded: false,
 
     usersStrokes: {}, // 18 holes, the render will be diff;
     usersStrokesParBirdieCount: {},
@@ -111,26 +104,66 @@ const GolfRoomScreen = ({ roomName }: GolfRoomScreenProps) => {
     holeNumber: 1,
   } as GolfGame);
 
-  const [showTransitionScoreboard, setShowTransitionScoreboard] = useState(false);
+  const handleLeave = async () => {
+    if (!userId) return null;
+    const userRef = doc(db, 'users', userId);
+
+    // only delete user from room if game hasnt ended
+    if (!room.gameEnded) {
+      await updateDoc(roomRef, {
+        userIds: arrayRemove(userId),
+        [`usersStrokes.${userId}`]: deleteField()
+      });
+    }
+
+    await updateDoc(userRef, {
+      roomName: ""
+    });
+  };
+
+
+  const handleSaveFailed = () => {
+    // to do
+  };
+
+  const save = () => {
+    if (!userId) return;
+    const gameHistoryRef = doc(db, 'users', userId, 'gamesHistory', room.gameId);
+    updateDoc(gameHistoryRef, {
+      pastRooms: arrayUnion(roomName)
+    })
+      .then(res => {
+        console.log("Room id saved");
+        setHasSaved(true);
+      })
+      .catch(err => {
+        console.error(err);
+        handleSaveFailed();
+      });
+  };
 
   // need to handle connectivity issue, what happens if data received is nothing?
+  const [hasSaved, setHasSaved] = useState(false);
+
   useEffect(() => {
     const unsubscribe = onSnapshot(roomRef, res => {
-      const data = res.data();
-      if (data) {
-        console.log(data);
-        setRoom(data as GolfGame);
+      const data = res.data() as GolfGame;
+      console.log(data);
+      setRoom(data);
+      if (data.holeNumber > 18) {
+        updateDoc(roomRef, {
+          gameEnded: true,
+          password: deleteField()
+        })
+          .catch(err => console.error(err));
       }
+      if (data.gameEnded && !hasSaved) save();
     });
 
     return function cleanup() {
       unsubscribe();
     };
   }, []);
-
-  const [leaveRoomIsOpen, setLeaveRoomIsOpen] = useState(false);
-  const onClose = () => setLeaveRoomIsOpen(false);
-  const cancelRef = useRef(null);
 
   const [showScores, setShowScores] = useState(false);
 
@@ -163,13 +196,9 @@ const GolfRoomScreen = ({ roomName }: GolfRoomScreenProps) => {
   const Header = () => {
     return useMemo(() => {
       return (
-        <HStack>
-          <TouchableOpacity onPress={() => setLeaveRoomIsOpen(true)}>
-            <Ionicons name="arrow-back" size={30} />
-          </TouchableOpacity>
-          <Text>{roomName}</Text>
-          <RoomDetails roomName={roomName} room={room} />
+        <HStack justifyContent="space-between">
           <UsersBar userIds={room.userIds} />
+          <RoomDetails roomName={roomName} room={room} handleLeave={handleLeave}/>
         </HStack>
       );
     }, [room.userIds]);
@@ -231,92 +260,31 @@ const GolfRoomScreen = ({ roomName }: GolfRoomScreenProps) => {
   };
 
   return (
-    <>
-        <Header />
-        {/* check that room has a golf course and that all handicap between pairs has been chosen */}
-        {room.golfCourseId && room.prepDone
-          ?
-          <ScrollView>
-            {showTransitionScoreboard
-              ? <TransitionScoreboard
-                userId={userId}
-                room={room}
-                showScores={showScores}
-                setShowTransitionScoreboard={setShowTransitionScoreboard}
-                setShowScores={setShowScores}
-              />
-              : <InputBox />
-            }
-            <AllStrokes roomName={roomName} usersStrokes={room.usersStrokes}/>
-          </ScrollView>
-          : <GolfPrepScreen
-            userId={userId}
-            roomName={roomName}
-            room={room}
-          />
-        }
-
-      <AlertDialog
-        leastDestructiveRef={cancelRef}
-        isOpen={leaveRoomIsOpen}
-        onClose={onClose}
-      >
-        <AlertDialog.Content>
-          <AlertDialog.CloseButton />
-          <AlertDialog.Header>Leave room permanently?</AlertDialog.Header>
-          <AlertDialog.Footer>
-            <Button.Group space={2}>
-              <Button
-                variant="unstyled"
-                colorScheme="coolGray"
-                onPress={() => {
-                  handleLeave();
-                  onClose();
-                }}
-                ref={cancelRef}
-              >
-                Leave room
-              </Button>
-            </Button.Group>
-          </AlertDialog.Footer>
-        </AlertDialog.Content>
-      </AlertDialog>
-    </>
-  );
-};
-
-const RoomDetails = ({ roomName, room }: { roomName: string, room: GolfGame }) => {
-  return (
-    <Box alignItems="center">
-      <Popover
-        trigger={(triggerProps) => {
-          return (
-            <Button {...triggerProps}>Room info</Button>
-          )
-        }}
-      >
-        <Popover.Content accessibilityLabel="Room Info" w="56">
-          <Popover.Arrow />
-          <Popover.CloseButton />
-          <Popover.Body>Room Name: {roomName}</Popover.Body>
-          <Popover.Body>Password: {room.password}</Popover.Body>
-        </Popover.Content>
-      </Popover>
+    <Box bg="red.100" flex={1} width="100%" padding="15">
+      <Header />
+      {/* check that room has a golf course and that all handicap between pairs has been chosen */}
+      {room.golfCourseId && room.prepDone
+        ?
+        <ScrollView>
+          {showTransitionScoreboard
+            ? <TransitionScoreboard
+              userId={userId}
+              room={room}
+              showScores={showScores}
+              setShowTransitionScoreboard={setShowTransitionScoreboard}
+              setShowScores={setShowScores}
+            />
+            : <InputBox />
+          }
+          <AllStrokes roomName={roomName} usersStrokes={room.usersStrokes}/>
+        </ScrollView>
+        : <GolfPrepScreen
+          userId={userId}
+          roomName={roomName}
+          room={room}
+        />
+      }
     </Box>
-  );
-};
-
-const UsersBar = ({ userIds }: { userIds: Array<String> }) => {
-  return (
-    <>
-      {userIds.forEach(userId => {
-        return (
-          <Box>
-            <Text>{userId}</Text>
-          </Box>
-        )
-      })}
-    </>
   );
 };
 
@@ -436,11 +404,3 @@ const AllStrokes = ({ roomName, usersStrokes }: { roomName: string, usersStrokes
 // };
 
 export default GolfRoomScreen;
-/* <Picker
-  selectedValue={selectedLanguage}
-  onValueChange={(itemValue, itemIndex) =>
-    setSelectedLanguage(itemValue)
-  }>
-  <Picker.Item label="Java" value="java" />
-  <Picker.Item label="JavaScript" value="js" />
-</Picker> */
