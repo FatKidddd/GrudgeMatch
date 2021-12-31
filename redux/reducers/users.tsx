@@ -1,5 +1,5 @@
 import { User } from "../../types";
-import { SET_ROOM_NAME, SET_USER } from "../actionTypes";
+import { DELETE_USER, SET_ROOM_NAME, SET_USER } from "../actionTypes";
 
 // may need to nest by one level if i need to keep track of other users data?
 interface Users {
@@ -22,6 +22,11 @@ const userInfoReducer = (state = defaultState, action: any) => {
         ...state,
         [user.id]: user
       };
+    }
+    case DELETE_USER: {
+      const userId = action.payload;
+      const { [userId]: garbage, ...withoutUser } = state;
+      return withoutUser;
     }
     default: {
       return state;

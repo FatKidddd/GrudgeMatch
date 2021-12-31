@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { GolfGame } from '../types';
 import { Box, Popover, AlertDialog, Button } from 'native-base';
+import ConfirmModal from './ConfirmModal';
 
 interface RoomDetailsProps {
   roomName: string;
@@ -10,8 +11,7 @@ interface RoomDetailsProps {
 
 const RoomDetails = ({ roomName, room, handleLeave }: RoomDetailsProps) => {
   const [leaveRoomIsOpen, setLeaveRoomIsOpen] = useState(false);
-  const onClose = () => setLeaveRoomIsOpen(false);
-  const cancelRef = useRef(null);
+
   return (
     <>
       <Box alignItems="center">
@@ -34,32 +34,15 @@ const RoomDetails = ({ roomName, room, handleLeave }: RoomDetailsProps) => {
             </Popover.Footer>
           </Popover.Content>
         </Popover>
+        
+        <ConfirmModal
+          isOpen={leaveRoomIsOpen}
+          onClose={() => setLeaveRoomIsOpen(false)}
+          callback={handleLeave}
+          headerDesc='Leave room permanently?'
+          buttonDesc='Leave'
+        />
       </Box>
-      <AlertDialog
-        leastDestructiveRef={cancelRef}
-        isOpen={leaveRoomIsOpen}
-        onClose={onClose}
-      >
-        <AlertDialog.Content>
-          <AlertDialog.CloseButton />
-          <AlertDialog.Header>Leave room permanently?</AlertDialog.Header>
-          <AlertDialog.Footer>
-            <Button.Group space={2}>
-              <Button
-                variant="unstyled"
-                colorScheme="coolGray"
-                onPress={() => {
-                  handleLeave();
-                  onClose();
-                }}
-                ref={cancelRef}
-              >
-                Leave room
-              </Button>
-            </Button.Group>
-          </AlertDialog.Footer>
-        </AlertDialog.Content>
-      </AlertDialog>
     </>
   );
 };

@@ -73,6 +73,7 @@ const HomeNavigator = () => {
         name="Game"
         component={GameScreen}
         options={({ navigation }: HomeStackScreenProps<'Game'>) => ({
+          headerShown: false,
           headerLeft: () => (
             <Pressable
               onPress={() => navigation.navigate('Games')}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { HStack, Center, Text, Box, ScrollView, VStack } from 'native-base';
 import { GolfCourse, GolfStrokes } from '../types';
-import userSelector from '../utils/userUtils';
+import { userSelector } from '../utils/userUtils';
 
 interface GolfArrayProps {
   course: GolfCourse;
@@ -63,4 +63,4 @@ const GolfArray = ({ course, usersStrokes }: GolfArrayProps) => {
   );
 };
 
-export default GolfArray;
+export default React.memo(GolfArray);

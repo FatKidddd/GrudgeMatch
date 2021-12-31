@@ -2,18 +2,17 @@ import _ from 'lodash';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { Text, Popover, Button, Center, Box, AlertDialog, HStack, Input, ScrollView, VStack } from "native-base";
+import { Text, Popover, Button, Center, Box, AlertDialog, HStack, Input, ScrollView, VStack, Pressable } from "native-base";
 import { TouchableOpacity } from 'react-native';
-import { Entypo, Ionicons } from '@expo/vector-icons';
+import { Entypo, FontAwesome, Ionicons } from '@expo/vector-icons';
 import { getFirestore, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, collection, deleteField, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useAppSelector } from '../../../hooks/selectorAndDispatch';
 import { GolfCourse, GolfGame, GolfStrokes, HomeStackParamList } from '../../../types';
 import GolfPrepScreen from './GolfPrepScreen';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { GolfArray, RoomDetails } from '../../../components';
+import { BackButton, GolfArray, RoomDetails } from '../../../components';
 import UsersBar from '../../../components/UsersBar';
-import userSelector from '../../../utils/userUtils';
 
 // leave room function
 
@@ -208,16 +207,15 @@ const GolfRoomScreen = ({ roomName, navigation }: GolfRoomScreenProps) => {
     }
   }, [room.usersStrokes]);
 
-  const Header = () => {
-    return useMemo(() => {
-      return (
-        <HStack mb={2} justifyContent="space-between">
-          <UsersBar userIds={room.userIds} />
-          <RoomDetails roomName={roomName} room={room} handleLeave={handleLeave}/>
-        </HStack>
-      );
-    }, [room.userIds]);
-  };
+  const header = useMemo(() => {
+    return (
+      <HStack mb={2} alignItems="center" justifyContent="space-between" marginTop={3}>
+        <BackButton onPress={() => navigation.navigate("Games")} />
+        <UsersBar userIds={room.userIds} />
+        <RoomDetails roomName={roomName} room={room} handleLeave={handleLeave}/>
+      </HStack>
+    );
+  }, [room.userIds]);
 
   const InputBox = () => {
     const [inputVal, setInputVal] = useState(1);
@@ -253,13 +251,33 @@ const GolfRoomScreen = ({ roomName, navigation }: GolfRoomScreenProps) => {
       const par = golfCourse.parArr ? golfCourse.parArr[room.holeNumber - 1] : null;
       let strokeDescription = null;
       if (par) {
-        if (inputVal < par) {
-          strokeDescription = 'Birdie'
-        } else if (inputVal === par) {
-          strokeDescription = 'Par'
-        } else {
-          strokeDescription = 'Anus'
+        const diff = par - inputVal;
+        switch (diff) {
+          case 4:
+            strokeDescription = 'Condor';
+            break;
+          case 3:
+            strokeDescription = 'Albatross';
+            break;
+          case 2:
+            strokeDescription = 'Eagle';
+            break;
+          case 1:
+            strokeDescription = 'Birdie';
+            break;
+          case 0:
+            strokeDescription = 'Par';
+            break;
+          // case -1:
+          //   strokeDescription = 'Bogey';
+          //   break;
+          // case -2:
+          //   strokeDescription = 'Double Bogey';
+          //   break;
+          default:
+            break;
         }
+        if (inputVal === 1) strokeDescription = 'Hole in One';
       }
 
       let bg = 'gray.100';
@@ -289,10 +307,10 @@ const GolfRoomScreen = ({ roomName, navigation }: GolfRoomScreenProps) => {
               borderWidth={5}
             />
             <HStack space={8}>
-              <TouchableOpacity onPress={decrement}>
+              <TouchableOpacity onPressIn={() => setInterval(decrement, 1000)} onPressOut={() => clearInterval}>
                 <Entypo name="minus" size={50} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={increment}>
+              <TouchableOpacity onPressIn={() => setInterval(increment, 1000)} onPressOut={() => clearInterval}>
                 <Entypo name="plus" size={50} />
               </TouchableOpacity>
             </HStack>
@@ -311,7 +329,7 @@ const GolfRoomScreen = ({ roomName, navigation }: GolfRoomScreenProps) => {
 
   return (
     <Box bg="red.100" flex={1} width="100%" padding="15">
-      <Header />
+      {header}
       {/* check that room has a golf course and that all handicap between pairs has been chosen */}
       {room.golfCourseId && room.prepDone
         ?

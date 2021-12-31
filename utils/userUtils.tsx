@@ -3,7 +3,7 @@ import { setUser } from '../redux/actions';
 import { getDoc, doc, getFirestore } from 'firebase/firestore';
 import { User } from '../types';
 
-export default function userSelector(uid: string) {
+const userSelector = (uid: string) => {
   const db = getFirestore();
   const users = useAppSelector(state => state.usersReducer);
   const dispatch = useAppDispatch();
@@ -28,5 +28,14 @@ export default function userSelector(uid: string) {
 
   if (users[uid]) return users[uid];
   getUser(uid);
-  return { id: "", name: "Unknown", roomName: "" };
+  return { id: "", name: "Unknown", roomName: "" } as User;
 };
+
+const getInitials = (name: string) => {
+  return name.split(" ").map(n => n[0] != " " ? n[0] : "").join("");
+  // const rgx = new RegExp(/(\p{L}{1})\p{L}+/, 'gu');
+  // let initials = [...name.matchAll(rgx)] || [];
+  // return ((initials.shift()?.[1] || '') + (initials.pop()?.[1] || '')).toUpperCase();
+};
+
+export { userSelector, getInitials };

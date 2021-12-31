@@ -64,10 +64,13 @@ export interface User {
   id: string;
   name: string;
   roomName: string;
-  pictureUrl?: string;
+  avatarColors: [string, string, string, string, string];
+  imageUrl?: string;
   // collection pastGames 
     // with game / sportId as document 
       // and collection of past rooms
+// #FFABAB, #FFDAAB, #DDFFAB, #ABE4FF, #D9ABFF
+  // #F2E7D2, #F79EB1, #AE8FBA, #4C5E91, #473469
 };
 
 export interface Game {

@@ -6,7 +6,7 @@ import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GolfArray } from '../../../components';
-import userSelector from '../../../utils/userUtils';
+import { userSelector } from '../../../utils/userUtils';
 
 interface GolfPrepScreenProps {
   userId: string | undefined;

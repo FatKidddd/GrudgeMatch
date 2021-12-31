@@ -9,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import gamesData from "../../../gamesData";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAppDispatch, useAppSelector } from "../../../hooks/selectorAndDispatch";
+import { BackButton } from "../../../components";
 //import { setReduxRoomName } from '../../../redux/actions';
 
 const RoomModalButtons = () => {
@@ -248,17 +249,20 @@ const GolfGameScreen = ({ navigation }: GolfGameScreenProps) => {
     }
   }, []);
 
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => roomName.length ? null : <RoomModalButtons />
-    });
-  }, [roomName]);
+  // useEffect(() => {
+  //   navigation.setOptions({
+  //     headerRight: () => roomName.length ? null : <RoomModalButtons />,
+  //     headerShown: roomName.length ? false : true,
+  //   });
+  // }, [roomName]);
 
   return (
     <Center flex={1}>
       {roomName.length > 0
         ? <GolfRoomScreen roomName={roomName} navigation={navigation}/>
         : <Box>
+          <BackButton onPress={() => navigation.navigate("Games")} />
+          <RoomModalButtons />
         </Box>
       }
     </Center>
