@@ -63,7 +63,9 @@ export type HomeStackScreenProps<Screen extends keyof HomeStackParamList> = Nati
 export interface User {
   id: string;
   name: string;
-  roomName: string;
+  roomNames: {
+    [gameId: string]: string;
+  };
   avatarColors: [string, string, string, string, string];
   imageUrl?: string;
   // collection pastGames 
@@ -127,7 +129,6 @@ export interface GolfGame extends Room {
     // userId1 + '-' + userId2
     [userPairId: string]: HandicapInfo;
   };
-  holeNumber: number;
 
   winnerId?: string;
 

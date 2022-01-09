@@ -10,7 +10,7 @@ import { getAuth } from 'firebase/auth';
 import { updateDoc, getFirestore, doc, deleteField } from 'firebase/firestore';
 import FastImage from 'react-native-fast-image';
 // import BoringAvatar from 'react-native-boring-avatars';
-import { userSelector, getInitials } from '../utils/userUtils';
+import { useUser, getInitials } from '../utils/userUtils';
 import { deleteUser } from '../redux/actions';
 import { useAppDispatch } from '../hooks/selectorAndDispatch';
 import { ConfirmModal } from '../components';
@@ -20,7 +20,7 @@ const ProfileScreen = ({}: RootDrawerScreenProps<'Profile'>) => {
   const uid = getAuth().currentUser?.uid;
   if (!uid) return null;
   const db = getFirestore();
-  const user = userSelector(uid);
+  const user = useUser(uid);
   const dispatch = useAppDispatch();
   const [uploading, setUploading] = useState(false);
 

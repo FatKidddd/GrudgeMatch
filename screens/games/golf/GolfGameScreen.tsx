@@ -54,7 +54,6 @@ const RoomModalButtons = () => {
           usersStrokesParBirdieCount: {},
           pointsArr: {},
           prepDone: false,
-          holeNumber: 1,
           gameEnded: false
         };
 
@@ -240,9 +239,10 @@ const GolfGameScreen = ({ navigation }: GolfGameScreenProps) => {
   useEffect(() => {
     const unsubscribe = onSnapshot(userRef, async (res) => {
       const data = res.data();
+
+      setRoomName(data?.roomNames && data.roomNames['game1'] ? data.roomNames['game1'] : "");
       //dispatch(setReduxRoomName(data?.roomName ? data.roomName : ""));
-      setRoomName(data?.roomName ? data.roomName : "");
-    });
+    }, (err) => console.error(err));
 
     return function cleanup() {
       unsubscribe();
@@ -260,9 +260,11 @@ const GolfGameScreen = ({ navigation }: GolfGameScreenProps) => {
     <Center flex={1}>
       {roomName.length > 0
         ? <GolfRoomScreen roomName={roomName} navigation={navigation}/>
-        : <Box>
-          <BackButton onPress={() => navigation.navigate("Games")} />
-          <RoomModalButtons />
+        : <Box flex={1} bg='blue.100' width={'100%'} padding={15}>
+          <HStack alignItems={'center'} justifyContent={'space-between'} height={50} mb={2} marginTop={3}>
+            <BackButton onPress={() => navigation.navigate("Games")} />
+            <RoomModalButtons />
+          </HStack>
         </Box>
       }
     </Center>

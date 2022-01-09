@@ -1,27 +1,25 @@
 import React from 'react';
 import { ScrollView, HStack, Box, Text, Avatar } from 'native-base';
-import { userSelector, getInitials } from '../utils/userUtils';
+import UserAvatar from './UserAvatar';
 
 const UsersBar = ({ userIds }: { userIds: Array<string> }) => {
-  if (userIds.length === 0) return null;
   return (
     <ScrollView horizontal marginRight="5">
-      <Avatar.Group size="md" marginRight={1}>
-        {userIds.map(userId => {
-          const user = userSelector(userId);
-          const avatarProps = { key: userId } as any;
-          if (!!user.imageUrl) {
-            avatarProps.source = {
-              uri: user.imageUrl
-            };
-          }
-          return (
-            <Avatar {...avatarProps}>
-              {getInitials(user.name)}
-            </Avatar>
-          );
-        })}
-      </Avatar.Group>
+      {/* <Avatar.Group size="md"> */}
+      <HStack>
+        {userIds.length !== 0
+          ? userIds.map((userId, i) => 
+            <UserAvatar
+              key={userId}
+              userId={userId}
+              marginRight={i == userIds.length - 1 ? 0 : -3}
+              zIndex={-i}
+            />
+          )
+          : <Avatar></Avatar>
+        }
+      </HStack>
+      {/* </Avatar.Group> */}
     </ScrollView>
   );
 };

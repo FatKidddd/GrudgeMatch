@@ -6,7 +6,7 @@ import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GolfArray } from '../../../components';
-import { userSelector } from '../../../utils/userUtils';
+import { useUser } from '../../../utils/userUtils';
 
 interface GolfPrepScreenProps {
   userId: string | undefined;
@@ -250,8 +250,8 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
         backCount: 0,
         locked: false
       };
-    const user = userSelector(userId);
-    const otherUser = userSelector(id);
+    const user = useUser(userId);
+    const otherUser = useUser(id);
     const handicapRowProps: HandicapRowProps = { user, otherUser, roomName, handicapInfo, flipped, pairId };
     return <HandicapRow {...handicapRowProps} />;
   };

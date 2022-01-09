@@ -6,7 +6,7 @@ import ConfirmModal from './ConfirmModal';
 interface RoomDetailsProps {
   roomName: string;
   room: GolfGame;
-  handleLeave: () => void;
+  handleLeave?: () => void;
 };
 
 const RoomDetails = ({ roomName, room, handleLeave }: RoomDetailsProps) => {
@@ -29,19 +29,23 @@ const RoomDetails = ({ roomName, room, handleLeave }: RoomDetailsProps) => {
             <Popover.Body>{roomName}</Popover.Body>
             <Popover.Body>Password:</Popover.Body>
             <Popover.Body>{room.password}</Popover.Body>
-            <Popover.Footer>
-              <Button colorScheme="danger" onPress={() => setLeaveRoomIsOpen(true)}>Leave room</Button>
-            </Popover.Footer>
+            {handleLeave
+              ? <Popover.Footer>
+                <Button colorScheme="danger" onPress={() => setLeaveRoomIsOpen(true)}>Leave room</Button>
+              </Popover.Footer>
+              : null}
           </Popover.Content>
         </Popover>
         
-        <ConfirmModal
-          isOpen={leaveRoomIsOpen}
-          onClose={() => setLeaveRoomIsOpen(false)}
-          callback={handleLeave}
-          headerDesc='Leave room permanently?'
-          buttonDesc='Leave'
-        />
+        {handleLeave
+          ? <ConfirmModal
+            isOpen={leaveRoomIsOpen}
+            onClose={() => setLeaveRoomIsOpen(false)}
+            callback={handleLeave}
+            headerDesc='Leave room permanently?'
+            buttonDesc='Leave'
+          />
+          : null}
       </Box>
     </>
   );

@@ -41,8 +41,6 @@
     "react-aria": "^3.11.0",
     "react-dom": "17.0.1",
     "react-native": "0.64.3",
-    "react-native-avataaars": "^1.0.2",
-    "react-native-boring-avatars": "^1.0.1",
     "react-native-fast-image": "^8.5.11",
     "react-native-gesture-handler": "~1.10.2",
     "react-native-reanimated": "~2.2.0",
@@ -62,5 +60,6 @@
     "jest-expo": "~43.0.0",
     "typescript": "~4.3.5"
   },
-  "private": true
+  "private": true,
+  "postinstall": "npx patch-package" 
 }
