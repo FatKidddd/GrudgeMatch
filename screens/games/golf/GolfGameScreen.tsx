@@ -1,19 +1,21 @@
+import _ from 'lodash';
 import React, { useEffect, useRef, useState } from "react"
 import { getAuth } from 'firebase/auth';
-import { getFirestore, getDoc, collection, query, orderBy, limit, startAfter, onSnapshot, doc, getDocs, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { getFirestore, getDoc, collection, query, orderBy, limit, startAfter, onSnapshot, doc, getDocs, setDoc, updateDoc, arrayUnion, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import GolfRoomScreen from './GolfRoomScreen';
-import { Modal, Button, Input, VStack, Text, FormControl, Box, Center, NativeBaseProvider, Tooltip, AlertDialog, HStack, Link } from "native-base"
-import { GolfGame, HomeStackParamList, HomeStackScreenProps } from "../../../types";
+import { Modal, Button, Input, VStack, Text, FormControl, Box, Center, NativeBaseProvider, Tooltip, AlertDialog, HStack, Link, FlatList, Spinner } from "native-base"
+import { GolfCourse, GolfGame, HomeStackParamList, HomeStackScreenProps } from "../../../types";
 import { TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import gamesData from "../../../gamesData";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAppDispatch, useAppSelector } from "../../../hooks/selectorAndDispatch";
-import { BackButton } from "../../../components";
-//import { setReduxRoomName } from '../../../redux/actions';
+import { BackButton, UsersBar } from "../../../components";
+import { SavedGolfGame } from "../../../redux/reducers/gamesHistory";
+import { useRoom } from "../../../utils/roomUtils";
+import { getBetScores } from "../../../utils";
 
 const RoomModalButtons = () => {
-  //const dispatch = useAppDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [show, setShow] = useState(false);
   const [roomName, setRoomName] = useState("");
@@ -46,6 +48,7 @@ const RoomModalButtons = () => {
         const golfGame: GolfGame = {
           userIds: [],
           dateCreated: new Date(),
+          dateEnded: null,
           gameId: gamesData[0].id,
           gameOwnerUserId: userId,
           bannedUserIds: [],
@@ -92,7 +95,7 @@ const RoomModalButtons = () => {
           // update user
           const userRef = doc(db, 'users', userId);
           await updateDoc(userRef, {
-            roomName
+            [`roomNames.${'golf'}`]: roomName
           });
           setShow(false);
         } else {
@@ -217,31 +220,130 @@ const RoomModalButtons = () => {
   )
 };
 
+const RoomView = ({ roomName }: { roomName: string }) => {
+  const room: GolfGame = useRoom(roomName);
+  const [course, setCourse] = useState<GolfCourse>();
+
+  useEffect(() => {
+    if (!room.golfCourseId || !course) return;
+    getDoc(doc(getFirestore(), 'golfCourses', room.golfCourseId))
+      .then(res => {
+        setCourse(res.data() as GolfCourse);
+      })
+      .catch(err => console.error(err));
+    
+  }, []);
+
+  if (!room?.userIds || !course) return null;
+
+  for (let i = 0; i < room.userIds.length; i++) {
+    for (let j = 0; j < room.userIds.length; j++) {
+      if (i === j) continue;
+      const uid = room.userIds[i];
+      const oppUid = room.userIds[j];
+      const { finalScore, finalScores } = getBetScores({ userId: uid, oppUid, course, room });
+    }
+  }
+  return (
+    <Box width={'100%'}>
+      <HStack justifyContent={'space-between'}>
+        <Text fontWeight={'semibold'} width={70} numberOfLines={1}>{roomName}</Text>
+        <UsersBar userIds={room.userIds}/>
+        <Text>{room.dateCreated.toLocaleDateString()}</Text>
+      </HStack>
+
+    </Box>
+  );
+};
+
+interface GolfHistoryScreenProps {
+  navigation: NativeStackNavigationProp<HomeStackParamList, 'Game'>;
+  userId: string;
+};
+
+const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
+  //const golfSavedRooms = useAppSelector(state => state.gamesHistoryReducer['golf']);
+  //const dispatch = useAppDispatch();
+  const [savedRooms, setSavedRooms] = useState([] as SavedGolfGame[]);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData>>();
+  const [loading, setLoading] = useState(false);
+  const [noMoreRooms, setNoMoreRooms] = useState(false);
+  
+  const getSavedRooms = async () => {
+    if (loading) return;
+    setLoading(true);
+    const golfHistoryRef = collection(getFirestore(), 'users', userId, 'golfHistory');
+    const q = lastVisible == undefined
+      ? query(golfHistoryRef, orderBy("dateSaved"), limit(1))
+      : query(golfHistoryRef, orderBy("dateSaved"), startAfter(lastVisible), limit(1));
+
+    try {
+      const documentSnapshots = await getDocs(q);
+      console.log("Got saved rooms");
+      const newSavedRooms: SavedGolfGame[] = [];
+      documentSnapshots.docs.forEach(doc => newSavedRooms.push({
+        id: doc.id,
+        ...doc.data()
+      } as SavedGolfGame));
+      // dispatch(addRooms('golf', savedGolfGames, documentSnapshots.docs[documentSnapshots.docs.length - 1]));
+      setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
+      setSavedRooms([...savedRooms, ...newSavedRooms]);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    // console.log(!!lastVisible)
+    setLoading(false);
+  }, [lastVisible]);
+
+  useEffect(() => {
+    getSavedRooms();
+  }, []);
+
+  const renderFooter = () => {
+    if (!loading) return null;
+    return <Spinner size="sm" />;
+  };
+
+  return (
+    <Box flex={1} bg='blue.100' width={'100%'} padding={15}>
+      <HStack alignItems={'center'} justifyContent={'space-between'} height={50} mb={2} marginTop={3}>
+        <BackButton onPress={() => navigation.navigate("Games")} />
+        <RoomModalButtons />
+      </HStack>
+      <FlatList
+        data={savedRooms}
+        renderItem={({ item }) => <RoomView roomName={item.id} />}
+        keyExtractor={(item, i) => item.id + i}
+        // onEndReached={getSavedRooms}
+        // onEndReachedThreshold={0.5}
+        // initialNumToRender={5}
+        ListFooterComponent={renderFooter}
+      />
+    </Box>
+  );
+};
+
 interface GolfGameScreenProps {
   navigation: NativeStackNavigationProp<HomeStackParamList, 'Game'>;
 };
 
-// shows history of games and join room buttons
+// contains all golf stuff --> shows history of games, join room buttons, room
 const GolfGameScreen = ({ navigation }: GolfGameScreenProps) => {
+  const [roomName, setRoomName] = useState("");
+
   const auth = getAuth();
   if (!auth.currentUser) return null;
-  
   const user = auth.currentUser;
   const db = getFirestore();
-
   const userRef = doc(db, 'users', user.uid);
-
-  // const roomName = useAppSelector(state => state.userInfoReducer.roomName);
-  // const dispatch = useAppDispatch();
-
-  const [roomName, setRoomName] = useState("");
 
   useEffect(() => {
     const unsubscribe = onSnapshot(userRef, async (res) => {
       const data = res.data();
-
-      setRoomName(data?.roomNames && data.roomNames['game1'] ? data.roomNames['game1'] : "");
-      //dispatch(setReduxRoomName(data?.roomName ? data.roomName : ""));
+      setRoomName(data?.roomNames && data.roomNames['golf'] ? data.roomNames['golf'] : "");
     }, (err) => console.error(err));
 
     return function cleanup() {
@@ -249,32 +351,19 @@ const GolfGameScreen = ({ navigation }: GolfGameScreenProps) => {
     }
   }, []);
 
-  // useEffect(() => {
-  //   navigation.setOptions({
-  //     headerRight: () => roomName.length ? null : <RoomModalButtons />,
-  //     headerShown: roomName.length ? false : true,
-  //   });
-  // }, [roomName]);
+  const props = {
+    navigation,
+    roomName,
+    userId: user.uid
+  };
 
   return (
     <Center flex={1}>
       {roomName.length > 0
-        ? <GolfRoomScreen roomName={roomName} navigation={navigation}/>
-        : <Box flex={1} bg='blue.100' width={'100%'} padding={15}>
-          <HStack alignItems={'center'} justifyContent={'space-between'} height={50} mb={2} marginTop={3}>
-            <BackButton onPress={() => navigation.navigate("Games")} />
-            <RoomModalButtons />
-          </HStack>
-        </Box>
-      }
+        ? <GolfRoomScreen {...props}/>
+        : <GolfHistoryScreen {...props}/>}
     </Center>
   );
 };
-
-// default view is progress and history of games
-// create room function
-// view room details stuff toast
-// button to go to room
-// room with all the players
 
 export default GolfGameScreen;

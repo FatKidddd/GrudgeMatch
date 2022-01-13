@@ -31,7 +31,7 @@ const useUser = (uid: string) => {
 
 
   if (users[uid]) return users[uid];
-  return { id: "", name: "Unknown", roomName: "" } as User;
+  return { id: "", name: "Unknown", roomNames: {} } as User;
 };
 
 const getInitials = (name: string) => {

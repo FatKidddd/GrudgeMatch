@@ -1,6 +1,6 @@
 const gamesData = [
   {
-    id: "game1",
+    id: "golf",
     name: "Golf"
   },
   {

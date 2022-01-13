@@ -6,7 +6,7 @@ import ConfirmModal from './ConfirmModal';
 interface RoomDetailsProps {
   roomName: string;
   room: GolfGame;
-  handleLeave?: () => void;
+  handleLeave: () => void;
 };
 
 const RoomDetails = ({ roomName, room, handleLeave }: RoomDetailsProps) => {
@@ -25,27 +25,23 @@ const RoomDetails = ({ roomName, room, handleLeave }: RoomDetailsProps) => {
           <Popover.Content accessibilityLabel="Room Info" w="56">
             <Popover.Arrow />
             <Popover.CloseButton />
-            <Popover.Body>Room Name:</Popover.Body> 
+            <Popover.Body>Room Name:</Popover.Body>
             <Popover.Body>{roomName}</Popover.Body>
             <Popover.Body>Password:</Popover.Body>
             <Popover.Body>{room.password}</Popover.Body>
-            {handleLeave
-              ? <Popover.Footer>
-                <Button colorScheme="danger" onPress={() => setLeaveRoomIsOpen(true)}>Leave room</Button>
-              </Popover.Footer>
-              : null}
+            <Popover.Footer>
+              <Button colorScheme="danger" onPress={() => setLeaveRoomIsOpen(true)}>Leave room</Button>
+            </Popover.Footer>
           </Popover.Content>
         </Popover>
         
-        {handleLeave
-          ? <ConfirmModal
-            isOpen={leaveRoomIsOpen}
-            onClose={() => setLeaveRoomIsOpen(false)}
-            callback={handleLeave}
-            headerDesc='Leave room permanently?'
-            buttonDesc='Leave'
-          />
-          : null}
+        <ConfirmModal
+          isOpen={leaveRoomIsOpen}
+          onClose={() => setLeaveRoomIsOpen(false)}
+          callback={handleLeave}
+          headerDesc='Leave room permanently?'
+          buttonDesc='Leave'
+        />
       </Box>
     </>
   );

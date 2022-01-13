@@ -66,7 +66,6 @@ export interface User {
   roomNames: {
     [gameId: string]: string;
   };
-  avatarColors: [string, string, string, string, string];
   imageUrl?: string;
   // collection pastGames 
     // with game / sportId as document 
@@ -86,6 +85,7 @@ export interface Game {
 export interface Room {
   userIds: Array<string>;
   dateCreated: Date;
+  dateEnded?: Date | null;
   gameId: string;
   gameOwnerUserId: string;
   bannedUserIds: Array<string>;
@@ -148,5 +148,5 @@ export interface GolfCourse {
 };
 
 export interface Games {
-  "game1": GolfGame;
+  "golf": GolfGame;
 };

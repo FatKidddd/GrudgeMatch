@@ -169,8 +169,6 @@ const ProfileScreen = ({}: RootDrawerScreenProps<'Profile'>) => {
                   padding: 2,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderTopLeftRadius: 20,
-                  borderBottomLeftRadius: 20,
                   borderWidth: 1
                 }}>
                 <MaterialCommunityIcons name="pencil" size={30} color="#aaaaaa"/>
@@ -185,8 +183,6 @@ const ProfileScreen = ({}: RootDrawerScreenProps<'Profile'>) => {
                   padding: 2,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderTopRightRadius: 20,
-                  borderBottomRightRadius: 20,
                   borderWidth: 1
                 }}
               >

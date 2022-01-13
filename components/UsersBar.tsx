@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, HStack, Box, Text, Avatar } from 'native-base';
+import { ScrollView, HStack, Avatar } from 'native-base';
 import UserAvatar from './UserAvatar';
 
 const UsersBar = ({ userIds }: { userIds: Array<string> }) => {

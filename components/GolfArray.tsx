@@ -1,42 +1,8 @@
 import _ from 'lodash';
-import React, { Children } from 'react';
+import React from 'react';
 import { HStack, Center, Text, Box, ScrollView, VStack } from 'native-base';
 import { GolfCourse, GolfStrokes, Stroke } from '../types';
-import { useUser } from '../utils/userUtils';
-
-interface GetColorTypeProps {
-  num: Stroke;
-  arrType?: 'Stroke' | 'Bet' | 'Par' | 'Hole' | 'Handicap';
-  compareNumber?: number;
-};
-
-const getColorType = ({ num, arrType, compareNumber }: GetColorTypeProps) => {
-  if (num == null || num == undefined) return 0;
-  switch (arrType) {
-    case 'Stroke':
-      // comparisonArr is par arr
-      if (compareNumber == null || compareNumber == undefined) return 0;
-      if (num < compareNumber) return 2;
-      else if (num === compareNumber) return 1;
-      return 0;
-    case 'Bet':
-      if (num > 0) return 1;
-      else if (num < 0) return 2;
-      return 0;
-  };
-  return 0;
-};
-
-const getColor = (colorType: number) => {
-  switch (colorType) {
-    case 1:
-      return 'green.100';
-    case 2:
-      return 'red.100';
-    default:
-      return 'gray.100';
-  }
-};
+import { useUser, getColor, getColorType } from '../utils';
 
 const sum = (arr: number[] | Stroke[]) => arr.map(e => Number(e)).reduce((prevVal, curVal) => prevVal + curVal);
 
@@ -116,9 +82,9 @@ const UsersStrokes = React.memo(({ usersStrokes, course }: UsersStrokesProps) =>
   return (
     <VStack marginTop={5}>
       {sortedStrokes.map(([uid, strokes], i) => {
-        console.log(uid);
-        console.log(strokes)
-        console.log(course.parArr)
+        // console.log(uid);
+        // console.log(strokes)
+        // console.log(course.parArr)
         return (
           <Box key={uid}>
             <Row

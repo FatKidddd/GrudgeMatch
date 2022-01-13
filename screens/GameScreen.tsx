@@ -13,7 +13,7 @@ const GameScreen = (props: HomeStackScreenProps<'Game'>) => {
 
   const renderGame = (gameId: string) => {
     switch (gameId) {
-      case "game1":
+      case "golf":
         return <GolfGameScreen navigation={navigation}/>
       case "game2":
         return null;
