@@ -7,13 +7,14 @@ import { ColorSchemeName, Pressable } from 'react-native';
 import AuthScreen from '../screens/AuthScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import ProfileScreen from '../screens/ProfileScreen';
 import GamesScreen from '../screens/GamesScreen';
 import GameScreen from '../screens/GameScreen';
 import { DrawerActions } from '@react-navigation/routers';
+import { signOut, getAuth } from 'firebase/auth';
 
 import { RootStackParamList, HomeStackParamList, HomeStackScreenProps, RootDrawerParamList, RootStackScreenProps, RootDrawerScreenProps } from '../types';
 import LinkingConfiguration from './LinkingConfiguration';
+import { Text } from 'native-base';
 
 const Navigation = ({ colorScheme }: { colorScheme?: ColorSchemeName }) => {
   return (
@@ -93,6 +94,12 @@ const HomeNavigator = () => {
   );
 };
 
+const handleLogOut = () => {
+  const auth = getAuth();
+  signOut(auth);
+  console.log("Logged out");
+};
+
 function DrawerNavigator() {
   return (
     <Drawer.Navigator
@@ -106,8 +113,22 @@ function DrawerNavigator() {
           headerShown: false
         })}
       />
-      <Drawer.Screen name="Profile" component={ProfileScreen} />
-      <Drawer.Screen name="Settings" component={SettingsScreen} />
+      <Drawer.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={({ navigation }: RootDrawerScreenProps<'Settings'>) => ({
+          headerRight: () => ( 
+            <Pressable
+              onPress={handleLogOut}
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.5 : 1,
+                marginRight: 12
+              })}>
+              <Text color='red.500'>Log out</Text>
+            </Pressable>
+           )
+        })}
+      />
     </Drawer.Navigator>
   );
 };

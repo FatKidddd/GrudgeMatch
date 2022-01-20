@@ -1,4 +1,3 @@
-import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { store } from './redux/store';
@@ -9,7 +8,7 @@ import Navigation from './navigation';
 // Import the functions you need from the SDKs you need
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
-import { LogBox } from 'react-native';
+import { StatusBar, LogBox, View } from 'react-native';
 
 LogBox.ignoreLogs(['Setting a timer for a long period of time'])
 

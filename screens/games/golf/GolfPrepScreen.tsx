@@ -6,18 +6,12 @@ import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GolfArray } from '../../../components';
-import { useUser } from '../../../utils/userUtils';
-
-interface GolfPrepScreenProps {
-  userId: string | undefined;
-  roomName: string;
-  room: GolfGame;
-};
+import useUser from '../../../hooks/useUser';
 
 const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
   const db = getFirestore();
 
-  const [courses, setCourses] = useState([] as Array<GolfCourse>);
+  const [courses, setCourses] = useState<Array<GolfCourse>>([]);
 
   // const addCourse = () => {
   //   const colRef = collection(db, 'golfCourses');
@@ -77,20 +71,24 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
   return (
     <>
       {userId === room.gameOwnerUserId
-        ? <SafeAreaView>
-          <Text>Select course</Text>
-          <FlatList
-            data={courses}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-          />
+        ? <Box flex={1} marginBottom={5}>
+          <Center>
+            <Text fontSize={18} fontWeight="500">Select course</Text>
+          </Center>
+          <Box flex={1}>
+            <FlatList
+              data={courses}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id}
+            />
+          </Box>
           <Box>
             <Button onPress={handleSubmit}>Submit</Button>
           </Box>
-        </SafeAreaView>
-        : <Box>
-          <Text>Wait for room owner to select course</Text>
         </Box>
+        : <Center flex={1}>
+          <Text>Wait for room owner to select course</Text>
+        </Center>
       }
     </>
   );
@@ -252,6 +250,7 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
       };
     const user = useUser(userId);
     const otherUser = useUser(id);
+    if (!user || !otherUser) return null;
     const handicapRowProps: HandicapRowProps = { user, otherUser, roomName, handicapInfo, flipped, pairId };
     return <HandicapRow {...handicapRowProps} />;
   };
@@ -264,20 +263,23 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
   const isReady = len * (len - 1) / 2 === cnt;
 
   return (
-    <VStack bg="green.100" flex={1}>
-      <GolfArray course={course}/>
-      <Box flex={1}>
+    <VStack bg="white" flex={1} marginY={5} padding={15} rounded={20}>
+      <Center marginBottom={3}>
+        <Text fontSize={18} fontWeight="500">Handicap</Text>
+      </Center>
+      <Box>
+        <GolfArray course={course}/>
+      </Box>
+      <Box marginY={5} flex={1}>
         <FlatList
           data={room.userIds.filter(uid => uid != userId)}
           renderItem={renderItem}
           keyExtractor={(item) => item} // since the item is the user id itself
-          bgColor={"blue.100"}
         />
       </Box>
       <Center>
         {userId === room.gameOwnerUserId
-          ?
-          isReady
+          ? isReady
             ? <Button onPress={handleStart}>Start game</Button>
             : <Text>Make sure all give and takes are locked</Text>
           : <Text>Wait for room owner to start game</Text>
@@ -287,7 +289,14 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
   );
 };
 
+interface GolfPrepScreenProps {
+  userId: string | undefined;
+  roomName: string;
+  room: GolfGame;
+};
+
 const GolfPrepScreen = (props: GolfPrepScreenProps) => {
+  console.log(props)
   return (
     <Box flex={1}>
       {props.room.golfCourseId

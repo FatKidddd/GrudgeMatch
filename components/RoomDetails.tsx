@@ -14,7 +14,7 @@ const RoomDetails = ({ roomName, room, handleLeave }: RoomDetailsProps) => {
 
   return (
     <>
-      <Box alignItems="center">
+      <Box alignItems="center" marginLeft={5}>
         <Popover
           trigger={(triggerProps) => {
             return (

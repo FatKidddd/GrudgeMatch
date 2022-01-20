@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
+import { ImageBackground } from 'react-native';
+import gamesData from '../gamesData';
 import { HomeStackScreenProps } from '../types';
 import { GolfGameScreen } from './games';
 
@@ -11,12 +13,24 @@ const GameScreen = (props: HomeStackScreenProps<'Game'>) => {
     }
   }, []);
 
+  const gamesImagePath = '../assets/images/games/';
+
   const renderGame = (gameId: string) => {
     switch (gameId) {
       case "golf":
-        return <GolfGameScreen navigation={navigation}/>
-      case "game2":
-        return null;
+        const bgImg = gamesData[gameId].imageName;
+        const path = gamesImagePath + bgImg;
+        return (
+          <ImageBackground
+            source={require('../assets/images/games/golf_bg.jpg')}
+            resizeMode="cover"
+            style={{ flex: 1, backgroundColor: '#eeeeee' }}
+            imageStyle={{ opacity: 0.4 }}
+            // blurRadius={10}
+          >
+            <GolfGameScreen navigation={navigation}/>
+          </ImageBackground>
+        );
       default:
         return null;
     }

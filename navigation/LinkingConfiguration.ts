@@ -21,7 +21,7 @@ const linking: LinkingOptions<RootStackParamList> = {
               Game: 'game'
             },
           },
-          Profile: 'profile',
+          //Profile: 'profile',
           Settings: 'settings'
         },
       },

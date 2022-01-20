@@ -19,7 +19,7 @@
     "@react-navigation/drawer": "^6.1.8",
     "@react-navigation/native": "^6.0.2",
     "@react-navigation/native-stack": "^6.1.0",
-    "@reduxjs/toolkit": "^1.6.2",
+    "@reduxjs/toolkit": "^1.7.1",
     "expo": "~43.0.2",
     "expo-application": "~4.0.0",
     "expo-asset": "~8.4.3",
@@ -61,5 +61,5 @@
     "typescript": "~4.3.5"
   },
   "private": true,
-  "postinstall": "npx patch-package" 
+  "postinstall": "npx patch-package"
 }

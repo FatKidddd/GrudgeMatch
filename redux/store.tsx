@@ -1,14 +1,15 @@
-import { createStore, applyMiddleware, compose } from 'redux';
-import { rootReducer } from './reducers';
-import { saveMiddleware } from './middleware';
-import thunk from 'redux-thunk';
+import { configureStore } from '@reduxjs/toolkit'
+import gamesHistoryReducer from './slices/gamesHistory';
+import usersReducer from './slices/users';
+import golfCoursesReducer from './slices/golfCourses';
 
-const storeEnhancers = compose; // window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
-
-export const store = createStore(
-  rootReducer,
-  storeEnhancers(applyMiddleware(saveMiddleware, thunk))
-);
+export const store = configureStore({
+  reducer: {
+    gamesHistory: gamesHistoryReducer,
+    users: usersReducer,
+    golfCourses: golfCoursesReducer,
+  },
+})
 
 export type RootState = ReturnType<typeof store.getState>
 // Inferred type: {posts: PostsState, comments: CommentsState, users: UsersState}

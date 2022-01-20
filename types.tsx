@@ -1,6 +1,7 @@
 //import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Timestamp } from 'firebase/firestore';
 
 declare global {
   namespace ReactNavigation {
@@ -83,9 +84,10 @@ export interface Game {
 
 // Game refers to one room of multiple people
 export interface Room {
+  id: string;
   userIds: Array<string>;
-  dateCreated: Date;
-  dateEnded?: Date | null;
+  dateCreated: Date | Timestamp; // may need to change to just Date type
+  dateEnded?: Date | Timestamp | null;
   gameId: string;
   gameOwnerUserId: string;
   bannedUserIds: Array<string>;
@@ -148,5 +150,5 @@ export interface GolfCourse {
 };
 
 export interface Games {
-  "golf": GolfGame;
+  golf: GolfGame;
 };

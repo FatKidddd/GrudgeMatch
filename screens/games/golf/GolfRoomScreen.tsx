@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Text, Popover, Button, Center, Box, HStack, ScrollView, VStack, PresenceTransition, useToast, Spinner } from "native-base";
+import { Text, Popover, Button, Center, Box, HStack, ScrollView, VStack, PresenceTransition, useToast, Spinner, StatusBar, IconButton, Icon } from "native-base";
 import { TouchableOpacity } from 'react-native';
 import { Entypo, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { getFirestore, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, collection, deleteField, getDoc, addDoc, setDoc } from 'firebase/firestore';
@@ -8,8 +8,11 @@ import { getAuth } from 'firebase/auth';
 import { GolfCourse, GolfGame, HomeStackParamList } from '../../../types';
 import GolfPrepScreen from './GolfPrepScreen';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { BackButton, GolfArray, RoomDetails, UsersBar, UserAvatar, UserScores, UsersStrokes } from '../../../components';
-import { getBetScores, useUser, getColor, getColorType, getUserHoleNumber } from '../../../utils';
+import { BackButton, GolfArray, RoomDetails, UsersBar, UserAvatar, UserScores, UsersStrokes, Header } from '../../../components';
+import { getBetScores, getColor, getColorType, getUserHoleNumber } from '../../../utils/golfUtils';
+import useUser from '../../../hooks/useUser';
+import { tryAsync } from '../../../utils/asyncUtils';
+import useGolfCourse from '../../../hooks/useGolfCourse';
 
 // leave room function
 
@@ -41,12 +44,12 @@ const BetRow = ({ userId, oppUid, course, room }: BetRowProps) => {
       <HStack marginBottom={5} justifyContent={'space-evenly'}>
         <HStack alignItems={'center'}>
           <Center width={70}>
-            <Text numberOfLines={1} marginBottom={3}>{useUser(userId).name}</Text>
+            <Text numberOfLines={1} marginBottom={3}>{useUser(userId)?.name}</Text>
             <UserAvatar userId={userId} />
           </Center>
           <Text marginTop={8}>vs</Text>
           <Center width={70}>
-            <Text numberOfLines={1} marginBottom={3}>{useUser(oppUid).name}</Text>
+            <Text numberOfLines={1} marginBottom={3}>{useUser(oppUid)?.name}</Text>
             <UserAvatar userId={oppUid} />
           </Center>
         </HStack>
@@ -82,11 +85,12 @@ interface TransitionScoreboardProps {
   room: GolfGame;
   roomName: string;
   setShowTransitionScoreboard: (bool: boolean) => void;
-  course: GolfCourse;
+  course: GolfCourse | undefined;
 };
 
 const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransitionScoreboard, course }: TransitionScoreboardProps) => {
   if (!userId || !course) return null;
+
   const db = getFirestore();
   const roomRef = doc(db, 'rooms', roomName);
   const holeNumber = getUserHoleNumber(room.usersStrokes[userId]);
@@ -146,17 +150,15 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
 interface GolfRoomScreenProps {
   roomName: string;
   navigation: NativeStackNavigationProp<HomeStackParamList, "Game">;
+  isSavedView?: boolean;
 };
 
 // may change usersStrokes to be a collection with multiple listeners to each player for scalability.
 // for now its just a more quick to implement solution
-const GolfRoomScreen = ({ roomName, navigation }: GolfRoomScreenProps) => {
-  const db = getFirestore();
-  const auth = getAuth();
-  const userId = auth.currentUser?.uid;
-  const roomRef = doc(db, 'rooms', roomName);
+const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenProps) => {
   const [showTransitionScoreboard, setShowTransitionScoreboard] = useState(false);
   const [room, setRoom] = useState({
+    id: '',
     userIds: [],
     dateCreated: new Date(),
     dateEnded: null,
@@ -171,11 +173,53 @@ const GolfRoomScreen = ({ roomName, navigation }: GolfRoomScreenProps) => {
     pointsArr: {},
     prepDone: false,
   } as GolfGame);
-
   // need to handle connectivity issue, what happens if data received is nothing?
-
-  const [golfCourse, setGolfCourse] = useState<GolfCourse>();
   const [loading, setLoading] = useState(true);
+  const golfCourse = useGolfCourse(room.golfCourseId);
+
+  // to get room
+  useEffect(() => {
+    const unsubscribe = onSnapshot(roomRef, res => {
+      const data = {
+        id: res.id,
+        ...res.data()
+      } as GolfGame;
+      console.log('room screen', data);
+      setRoom(data);
+      setLoading(false);
+
+      // handle game end
+      if (data.gameEnded && !isSavedView) save();
+    });
+    return () => unsubscribe();
+  }, []);
+
+
+  // to handle game end
+  useEffect(() => {
+    if (room.gameEnded) return; // to only end game once
+    const usersStrokesArr = Object.values(room.usersStrokes);
+    if (usersStrokesArr.length === 0) return;
+    // handle all ended
+    const userHoleNumbers = usersStrokesArr.map(arr => getUserHoleNumber(arr));
+    const lowestHoleNumber = Math.min(...userHoleNumbers);
+    console.log("lowestholenumber", lowestHoleNumber)
+    if (lowestHoleNumber === 19) {
+      (async () => {
+        const [res, err] = await tryAsync(updateDoc(roomRef, {
+          gameEnded: true,
+          dateEnded: new Date(),
+          password: deleteField()
+        }));
+        if (res) console.log("Game ended");
+      })();
+    }
+  }, [room.usersStrokes]);
+
+  const db = getFirestore();
+  const auth = getAuth();
+  const userId = auth.currentUser?.uid;
+  const roomRef = doc(db, 'rooms', roomName);
 
   const handleLeave = async () => {
     if (!userId) return null;
@@ -234,61 +278,24 @@ const GolfRoomScreen = ({ roomName, navigation }: GolfRoomScreenProps) => {
       // });
   };
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(roomRef, res => {
-      const data = res.data() as GolfGame;
-      console.log(data);
-      setRoom(data);
-      setLoading(false);
-
-      // handle game end
-      if (data.gameEnded) save();
-
-      // get golf course
-      if (data.golfCourseId && !golfCourse) {
-        getDoc(doc(db, 'golfCourses', data.golfCourseId))
-          .then(res => {
-            setGolfCourse(res.data() as GolfCourse);
-          })
-          .catch(err => console.error(err));
-      }
-    });
-
-    return function cleanup() {
-      unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (room.gameEnded) return; // to stop infinite loop
-    const usersStrokesArr = Object.values(room.usersStrokes);
-    if (usersStrokesArr.length === 0) return;
-    // handle all ended
-    const userHoleNumbers = usersStrokesArr.map(arr => getUserHoleNumber(arr));
-    const lowestHoleNumber = Math.min(...userHoleNumbers);
-    console.log("lowestholenumber", lowestHoleNumber)
-    if (lowestHoleNumber === 19) {
-      updateDoc(roomRef, {
-        gameEnded: true,
-        dateEnded: new Date(),
-        password: deleteField()
-      })
-        .then(res => {
-          console.log("Game ended");
-        })
-        .catch(err => console.error(err));
-    }
-  }, [room.usersStrokes]);
-
   const header = useMemo(() => {
+    if (isSavedView) {
+      return (
+        <HStack alignItems="center" justifyContent="space-between" shadow={2} marginBottom={3}>
+          <UsersBar userIds={room.userIds} />
+        </HStack>
+      );
+    }
     return (
-      <HStack mb={2} alignItems="center" justifyContent="space-between" marginTop={3} height={50}>
-        <BackButton onPress={() => navigation.navigate("Games")} />
-        <UsersBar userIds={room.userIds} />
-        <RoomDetails roomName={roomName} room={room} handleLeave={handleLeave}/>
-      </HStack>
+      <Header>
+        <HStack alignItems="center" justifyContent="space-between" shadow={2}>
+          <BackButton onPress={() => navigation.navigate("Games")} />
+          <UsersBar userIds={room.userIds}/>
+          <RoomDetails roomName={roomName} room={room} handleLeave={handleLeave} />
+        </HStack>
+      </Header>
     );
-  }, [room.userIds, room.gameEnded]);
+  }, [room.userIds, room.gameEnded, isSavedView]);
 
   
   if (!userId) return null;
@@ -300,50 +307,52 @@ const GolfRoomScreen = ({ roomName, navigation }: GolfRoomScreenProps) => {
   const inputBoxProps = { room, roomName, golfCourse, userId, holeNumber, setShowTransitionScoreboard };
 
   return (
-    <Box bg="red.100" flex={1} width="100%" padding="15">
-      {loading
-        ? <Center flex={1}>
-          <Spinner size="lg"/>
-        </Center>
-        : <>
-          {header}
-          {/* check that room has a golf course and that all handicap between pairs has been chosen */}
-          {room.golfCourseId && room.prepDone
-            ?
-            <ScrollView>
-              {showTransitionScoreboard
-                ? <TransitionScoreboard
-                  userId={userId}
-                  room={room}
-                  roomName={roomName}
-                  setShowTransitionScoreboard={setShowTransitionScoreboard}
-                  course={golfCourse}
-                />
-                : <InputBox {...inputBoxProps} />
-              }
-              <Box padding={5} rounded={20} bg={'white'}>
-                <Text fontSize={18} fontWeight={'semibold'} marginBottom={3}>All Strokes</Text>
-                <GolfArray course={golfCourse}>
-                  <UsersStrokes usersStrokes={room.usersStrokes} course={golfCourse} />
-                </GolfArray>
-              </Box>
-              {/* <AllStrokes roomName={roomName} usersStrokes={room.usersStrokes}/> */}
-            </ScrollView>
-            : <GolfPrepScreen
-              userId={userId}
-              roomName={roomName}
-              room={room}
-            />
-          }
-        </>}
-    </Box>
+    <>
+      {header}
+      <Box flex={1} width="100%" paddingX={15}>
+        {loading
+          ? <Center flex={1}>
+            <Spinner size="lg"/>
+          </Center>
+          : <>
+            {/* check that room has a golf course and that all handicap between pairs has been chosen */}
+            {room.golfCourseId && room.prepDone
+              ?
+              <ScrollView>
+                {showTransitionScoreboard
+                  ? <TransitionScoreboard
+                    userId={userId}
+                    room={room}
+                    roomName={roomName}
+                    setShowTransitionScoreboard={setShowTransitionScoreboard}
+                    course={golfCourse}
+                  />
+                  : <InputBox {...inputBoxProps} />
+                }
+                <Center padding={5} rounded={20} bg={'white'}>
+                  <Text fontSize={18} fontWeight={'semibold'} marginBottom={3}>All Strokes</Text>
+                  <GolfArray course={golfCourse}>
+                    <UsersStrokes usersStrokes={room.usersStrokes} course={golfCourse} />
+                  </GolfArray>
+                </Center>
+                {/* <AllStrokes roomName={roomName} usersStrokes={room.usersStrokes}/> */}
+              </ScrollView>
+              : <GolfPrepScreen
+                userId={userId}
+                roomName={roomName}
+                room={room}
+              />
+            }
+          </>}
+      </Box>
+    </>
   );
 };
 
 interface InputBoxProps {
   room: GolfGame;
   roomName: string;
-  golfCourse: GolfCourse;
+  golfCourse: GolfCourse | undefined;
   userId: string;
   holeNumber: number;
   setShowTransitionScoreboard: (bool: boolean) => void;
@@ -381,7 +390,8 @@ const InputBox = ({ room, roomName, golfCourse, userId, holeNumber, setShowTrans
     setInputVal(inputVal - 1);
   };
 
-  if (!userId) return null;
+  if (!userId || !golfCourse) return null;
+
   const par = golfCourse.parArr && holeNumber && holeNumber > 0 ? golfCourse.parArr[holeNumber - 1] : null;
   let strokeDescription = null;
   if (par) {

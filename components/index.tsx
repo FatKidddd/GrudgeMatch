@@ -4,6 +4,7 @@ import UsersBar from "./UsersBar";
 import { GolfArray, UsersStrokes, UserScores, getColor, getColorType } from "./GolfArray";
 import ConfirmModal from "./ConfirmModal";
 import BackButton from "./BackButton";
+import Header from "./Header";
 
 export {
   RoomDetails,
@@ -15,5 +16,6 @@ export {
   getColor,
   getColorType,
   ConfirmModal,
-  BackButton
+  BackButton,
+  Header,
 };

@@ -2,7 +2,8 @@ import _ from 'lodash';
 import React from 'react';
 import { HStack, Center, Text, Box, ScrollView, VStack } from 'native-base';
 import { GolfCourse, GolfStrokes, Stroke } from '../types';
-import { useUser, getColor, getColorType } from '../utils';
+import { getColor, getColorType } from '../utils/golfUtils';
+import useUser from '../hooks/useUser';
 
 const sum = (arr: number[] | Stroke[]) => arr.map(e => Number(e)).reduce((prevVal, curVal) => prevVal + curVal);
 
@@ -15,7 +16,7 @@ const Tile = ({ num, color }: { num: Stroke | string, color: string }) => {
 };
 
 interface ArrProps {
-  text: string;
+  text: string | undefined;
   arr: Array<number | null> | GolfStrokes;
   arrType?: 'Stroke' | 'Bet' | 'Par' | 'Hole' | 'Handicap';
   comparisonArr?: Array<number>;
@@ -74,10 +75,12 @@ interface UsersStrokesProps {
   usersStrokes: {
     [userId: string]: GolfStrokes;
   };
-  course: GolfCourse;
+  course: GolfCourse | undefined;
 };
 
 const UsersStrokes = React.memo(({ usersStrokes, course }: UsersStrokesProps) => {
+  if (!course) return null;
+
   const sortedStrokes = Object.entries(usersStrokes).sort();
   return (
     <VStack marginTop={5}>
@@ -88,7 +91,7 @@ const UsersStrokes = React.memo(({ usersStrokes, course }: UsersStrokesProps) =>
         return (
           <Box key={uid}>
             <Row
-              text={useUser(uid).name}
+              text={useUser(uid)?.name}
               arr={strokes}
               arrType='Stroke'
               comparisonArr={course.parArr}
@@ -107,10 +110,11 @@ interface UserScoresProps {
 };
 
 const UserScores = React.memo(({ userScores, uid, oppUid }: UserScoresProps) => {
+  const oppUsername = useUser(oppUid)?.name;
   return (
     <VStack marginTop={5}>
       <Row
-        text={'You vs ' + useUser(oppUid).name}
+        text={'You vs ' + oppUsername}
         arr={userScores}
         arrType='Bet'
       />
@@ -119,11 +123,12 @@ const UserScores = React.memo(({ userScores, uid, oppUid }: UserScoresProps) => 
 });
 
 interface GolfArrayProps {
-  course: GolfCourse;
+  course: GolfCourse | undefined;
   children?: React.ReactNode;
 };
 
 const GolfArray = React.memo(({ course, children }: GolfArrayProps) => {
+  if (!course) return null;
   return (
     <ScrollView horizontal>
       <VStack>

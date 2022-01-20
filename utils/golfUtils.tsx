@@ -8,7 +8,7 @@ interface GetBetScores {
   room: GolfGame;
 };
 
-const getBetScores = ({ userId, oppUid, course, room }: GetBetScores) => {
+export const getBetScores = ({ userId, oppUid, course, room }: GetBetScores) => {
   const userScores = room.usersStrokes[userId];
   const oppScores = room.usersStrokes[oppUid];
   const ids = [oppUid, userId].sort();
@@ -52,7 +52,7 @@ interface GetColorTypeProps {
   compareNumber?: number;
 };
 
-const getColorType = ({ num, arrType, compareNumber }: GetColorTypeProps) => {
+export const getColorType = ({ num, arrType, compareNumber }: GetColorTypeProps) => {
   if (num == null || num == undefined) return 0;
   switch (arrType) {
     case 'Stroke':
@@ -69,7 +69,7 @@ const getColorType = ({ num, arrType, compareNumber }: GetColorTypeProps) => {
   return 0;
 };
 
-const getColor = (colorType: number) => {
+export const getColor = (colorType: number) => {
   switch (colorType) {
     case 1:
       return 'green.100';
@@ -80,7 +80,7 @@ const getColor = (colorType: number) => {
   }
 };
 
-const getUserHoleNumber = (arr: GolfStrokes) => {
+export const getUserHoleNumber = (arr: GolfStrokes) => {
   if (!arr) return -1;
   let i = 0;
   for (; i < arr.length; i++) {
@@ -88,5 +88,3 @@ const getUserHoleNumber = (arr: GolfStrokes) => {
   }
   return i + 1;
 };
-
-export { getBetScores, getColor, getColorType, getUserHoleNumber };
