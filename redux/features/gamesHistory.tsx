@@ -1,17 +1,12 @@
-import { DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
-import { GolfGame } from "../../types";
+import { DocumentData, QueryDocumentSnapshot, Timestamp } from "firebase/firestore";
+import { GolfGame, SavedRoom } from "../../types";
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { GamesDataType } from "../../gamesData";
-
-export type SavedRoom = {
-  id: string;
-  dateSaved: Date;
-};
 
 export type SavedGames = { // finally managed to get this working
   [gameId in keyof GamesDataType]: {
     savedRooms: SavedRoom[],
-    lastVisible: QueryDocumentSnapshot<DocumentData> | null | undefined;
+    lastVisibleId: string | null | undefined;
   };
 }
 
@@ -25,7 +20,7 @@ const initialState: GamesHistory = {
   rooms: {},
   golf: {
     savedRooms: [],
-    lastVisible: null
+    lastVisibleId: undefined
   }
 };
 
@@ -36,16 +31,16 @@ export const gamesHistorySlice = createSlice({
     // increment: (state) => {
     //   state.value += 1
     // },
-    addSavedRooms: (state, action: PayloadAction<{ gameId: keyof GamesDataType, savedRooms: SavedRoom[], lastVisible: QueryDocumentSnapshot<DocumentData> | null }>) => {
-      const { gameId, savedRooms, lastVisible } = action.payload;
-      state[gameId].savedRooms.concat(savedRooms);
-      state[gameId].lastVisible = lastVisible;
+    addSavedRooms: (state, action: PayloadAction<{ gameId: keyof GamesDataType, savedRooms: SavedRoom[], lastVisibleId: string | null | undefined }>) => {
+      const { gameId, savedRooms, lastVisibleId } = action.payload;
+      state[gameId].savedRooms.push(...savedRooms);
+      state[gameId].lastVisibleId = lastVisibleId;
     },
     deleteSavedRooms: (state, action: PayloadAction<keyof GamesDataType>) => {
       const gameId = action.payload;
       state[gameId] = {
         savedRooms: [],
-        lastVisible: null
+        lastVisibleId: undefined
       };
     },
     addRoom: (state, action: PayloadAction<GolfGame>) => {

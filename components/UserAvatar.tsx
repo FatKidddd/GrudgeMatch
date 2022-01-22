@@ -1,7 +1,7 @@
 import React from 'react';
 import { Avatar } from 'native-base';
 import { getInitials } from '../utils/userUtils';
-import useUser from '../hooks/useUser';
+import { useUser } from '../hooks/useFireGet';
 import _ from 'lodash';
 
 interface UserAvatarProps {
@@ -13,7 +13,7 @@ interface UserAvatarProps {
 
 const UserAvatar = ({ userId, marginRight, zIndex, size }: UserAvatarProps) => {
   // needs to be in a separate component like this because it uses a hook
-  const user = useUser(userId);
+  const [user, userIsLoading] = useUser(userId);
   if (!user) return null;
   const avatarProps = { key: user.id } as any;
   if (!!user.imageUrl) avatarProps.source = { uri: user.imageUrl };

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Icon, Text, Box, ScrollView, Center, Button, Image, Avatar, HStack, Flex, Switch, Heading, useColorMode, VStack, Stack } from 'native-base';
+import { Icon, Text, ScrollView, Center, Button, Avatar, HStack, Switch, useColorMode } from 'native-base';
 import { RootDrawerScreenProps } from '../types';
 import * as ImagePicker from "expo-image-picker";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject,  } from "firebase/storage";
-import { LogBox, Platform, TouchableOpacity } from "react-native";
+import { LogBox, Platform } from "react-native";
 import uuid from "react-native-uuid";
 import { Camera } from 'expo-camera';
 import { getAuth, signOut } from 'firebase/auth';
@@ -11,11 +11,11 @@ import { updateDoc, getFirestore, doc, deleteField } from 'firebase/firestore';
 import FastImage from 'react-native-fast-image';
 // import BoringAvatar from 'react-native-boring-avatars';
 import { getInitials } from '../utils/userUtils';
-import useUser from '../hooks/useUser';
+import { useUser } from '../hooks/useFireGet';
 import { useAppDispatch } from '../hooks/selectorAndDispatch';
 import { ConfirmModal } from '../components';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
-import { deleteUser } from '../redux/slices/users';
+import { deleteUser } from '../redux/features/users';
 
 const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
   const [uploading, setUploading] = useState(false);
@@ -25,7 +25,7 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
   if (!uid) return null;
   const db = getFirestore();
   const userRef = doc(db, 'users', uid);
-  const user = useUser(uid);
+  const [user, userIsLoading] = useUser(uid);
   if (!user) return null;
   const dispatch = useAppDispatch();
 

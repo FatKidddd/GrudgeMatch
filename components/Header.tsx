@@ -5,7 +5,7 @@ const Header = ({ children }: { children?: React.ReactNode }) => {
   return (
     <>
       {/* <StatusBar backgroundColor="#3700B3" barStyle="light-content" /> */}
-      <Box safeAreaTop bg='white' shadow={2} width='100%' paddingX={3} marginBottom={3} paddingBottom={2}>
+      <Box safeAreaTop bg='white' shadow={2} width='100%' paddingX={3} paddingBottom={2} zIndex={100}>
         {children}
       </Box>
     </>

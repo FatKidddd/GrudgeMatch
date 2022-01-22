@@ -86,8 +86,8 @@ export interface Game {
 export interface Room {
   id: string;
   userIds: Array<string>;
-  dateCreated: Date | Timestamp; // may need to change to just Date type
-  dateEnded?: Date | Timestamp | null;
+  dateCreated: string; // may need to change to just Date type --> nvm it has to be string because Date is not serializable
+  dateEnded?: string | null | undefined;
   gameId: string;
   gameOwnerUserId: string;
   bannedUserIds: Array<string>;
@@ -151,4 +151,9 @@ export interface GolfCourse {
 
 export interface Games {
   golf: GolfGame;
+};
+
+export type SavedRoom = {
+  id: string;
+  dateSaved: string;
 };

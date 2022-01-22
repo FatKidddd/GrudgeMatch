@@ -5,6 +5,7 @@ import { GolfArray, UsersStrokes, UserScores, getColor, getColorType } from "./G
 import ConfirmModal from "./ConfirmModal";
 import BackButton from "./BackButton";
 import Header from "./Header";
+import LoadingView from "./LoadingView";
 
 export {
   RoomDetails,
@@ -18,4 +19,5 @@ export {
   ConfirmModal,
   BackButton,
   Header,
+  LoadingView
 };

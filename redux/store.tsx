@@ -1,7 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit'
-import gamesHistoryReducer from './slices/gamesHistory';
-import usersReducer from './slices/users';
-import golfCoursesReducer from './slices/golfCourses';
+import gamesHistoryReducer from './features/gamesHistory';
+import usersReducer from './features/users';
+import golfCoursesReducer from './features/golfCourses';
 
 export const store = configureStore({
   reducer: {

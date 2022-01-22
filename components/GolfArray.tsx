@@ -3,7 +3,7 @@ import React from 'react';
 import { HStack, Center, Text, Box, ScrollView, VStack } from 'native-base';
 import { GolfCourse, GolfStrokes, Stroke } from '../types';
 import { getColor, getColorType } from '../utils/golfUtils';
-import useUser from '../hooks/useUser';
+import { useUser } from '../hooks/useFireGet';
 
 const sum = (arr: number[] | Stroke[]) => arr.map(e => Number(e)).reduce((prevVal, curVal) => prevVal + curVal);
 
@@ -88,10 +88,11 @@ const UsersStrokes = React.memo(({ usersStrokes, course }: UsersStrokesProps) =>
         // console.log(uid);
         // console.log(strokes)
         // console.log(course.parArr)
+        const [user, userIsLoading] = useUser(uid);
         return (
           <Box key={uid}>
             <Row
-              text={useUser(uid)?.name}
+              text={user?.name}
               arr={strokes}
               arrType='Stroke'
               comparisonArr={course.parArr}
@@ -110,11 +111,11 @@ interface UserScoresProps {
 };
 
 const UserScores = React.memo(({ userScores, uid, oppUid }: UserScoresProps) => {
-  const oppUsername = useUser(oppUid)?.name;
+  const [oppUser, oppUserIsLoading] = useUser(oppUid);
   return (
     <VStack marginTop={5}>
       <Row
-        text={'You vs ' + oppUsername}
+        text={'You vs ' + oppUser?.name}
         arr={userScores}
         arrType='Bet'
       />

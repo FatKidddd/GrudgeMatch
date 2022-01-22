@@ -8,11 +8,11 @@ import { getAuth } from 'firebase/auth';
 import { GolfCourse, GolfGame, HomeStackParamList } from '../../../types';
 import GolfPrepScreen from './GolfPrepScreen';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { BackButton, GolfArray, RoomDetails, UsersBar, UserAvatar, UserScores, UsersStrokes, Header } from '../../../components';
+import { BackButton, GolfArray, RoomDetails, UsersBar, UserAvatar, UserScores, UsersStrokes, Header, LoadingView } from '../../../components';
 import { getBetScores, getColor, getColorType, getUserHoleNumber } from '../../../utils/golfUtils';
-import useUser from '../../../hooks/useUser';
 import { tryAsync } from '../../../utils/asyncUtils';
-import useGolfCourse from '../../../hooks/useGolfCourse';
+import { useGolfCourse, useUser } from '../../../hooks/useFireGet';
+import { formatData } from '../../../utils/dateUtils';
 
 // leave room function
 
@@ -25,6 +25,8 @@ interface BetRowProps {
 
 const BetRow = ({ userId, oppUid, course, room }: BetRowProps) => {
   const [showDetail, setShowDetail] = useState(false);
+  const [user, userIsLoading] = useUser(userId);
+  const [oppUser, oppUserIsLoading] = useUser(oppUid);
 
   const { finalScore, finalScores } = getBetScores({ userId, oppUid, course, room });
 
@@ -44,12 +46,12 @@ const BetRow = ({ userId, oppUid, course, room }: BetRowProps) => {
       <HStack marginBottom={5} justifyContent={'space-evenly'}>
         <HStack alignItems={'center'}>
           <Center width={70}>
-            <Text numberOfLines={1} marginBottom={3}>{useUser(userId)?.name}</Text>
+            <Text numberOfLines={1} marginBottom={3}>{user?.name}</Text>
             <UserAvatar userId={userId} />
           </Center>
           <Text marginTop={8}>vs</Text>
           <Center width={70}>
-            <Text numberOfLines={1} marginBottom={3}>{useUser(oppUid)?.name}</Text>
+            <Text numberOfLines={1} marginBottom={3}>{oppUser?.name}</Text>
             <UserAvatar userId={oppUid} />
           </Center>
         </HStack>
@@ -160,8 +162,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
   const [room, setRoom] = useState({
     id: '',
     userIds: [],
-    dateCreated: new Date(),
-    dateEnded: null,
+    dateCreated: '',
     gameId: "",
     gameOwnerUserId: "",
     bannedUserIds: [],
@@ -175,7 +176,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
   } as GolfGame);
   // need to handle connectivity issue, what happens if data received is nothing?
   const [loading, setLoading] = useState(true);
-  const golfCourse = useGolfCourse(room.golfCourseId);
+  const [golfCourse, courseIsLoading] = useGolfCourse(room.golfCourseId);
 
   // to get room
   useEffect(() => {
@@ -184,6 +185,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
         id: res.id,
         ...res.data()
       } as GolfGame;
+      formatData(data);
       console.log('room screen', data);
       setRoom(data);
       setLoading(false);
@@ -254,9 +256,6 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
     const docRef = doc(db, 'users', userId, 'golfHistory', roomName);
 
     // if fail to save, room name will still be there, so user when entering golf game will trigger the save function
-    // getDoc(docRef)
-    //   .then(res => {
-    //     if (res.exists()) return; // this first get may not be necessary
     setDoc(docRef, {
       dateSaved: new Date()
     })
@@ -271,24 +270,19 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
         console.error(err);
         handleSaveError();
       });
-      // })
-      // .catch(err => {
-      //   console.error(err);
-      //   handleSaveError();
-      // });
   };
 
   const header = useMemo(() => {
     if (isSavedView) {
       return (
-        <HStack alignItems="center" justifyContent="space-between" shadow={2} marginBottom={3}>
+        <HStack alignItems="center" justifyContent="space-between" marginBottom={3}>
           <UsersBar userIds={room.userIds} />
         </HStack>
       );
     }
     return (
       <Header>
-        <HStack alignItems="center" justifyContent="space-between" shadow={2}>
+        <HStack alignItems="center" justifyContent="space-between">
           <BackButton onPress={() => navigation.navigate("Games")} />
           <UsersBar userIds={room.userIds}/>
           <RoomDetails roomName={roomName} room={room} handleLeave={handleLeave} />
@@ -318,22 +312,26 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
             {/* check that room has a golf course and that all handicap between pairs has been chosen */}
             {room.golfCourseId && room.prepDone
               ?
-              <ScrollView>
-                {showTransitionScoreboard
-                  ? <TransitionScoreboard
-                    userId={userId}
-                    room={room}
-                    roomName={roomName}
-                    setShowTransitionScoreboard={setShowTransitionScoreboard}
-                    course={golfCourse}
-                  />
-                  : <InputBox {...inputBoxProps} />
-                }
+              <ScrollView paddingTop={3}>
+                <LoadingView isLoading={courseIsLoading}>
+                  {showTransitionScoreboard
+                    ? <TransitionScoreboard
+                      userId={userId}
+                      room={room}
+                      roomName={roomName}
+                      setShowTransitionScoreboard={setShowTransitionScoreboard}
+                      course={golfCourse}
+                    />
+                    : <InputBox {...inputBoxProps} />
+                  }
+                </LoadingView>
                 <Center padding={5} rounded={20} bg={'white'}>
                   <Text fontSize={18} fontWeight={'semibold'} marginBottom={3}>All Strokes</Text>
-                  <GolfArray course={golfCourse}>
-                    <UsersStrokes usersStrokes={room.usersStrokes} course={golfCourse} />
-                  </GolfArray>
+                  <LoadingView isLoading={courseIsLoading}>
+                    <GolfArray course={golfCourse}>
+                      <UsersStrokes usersStrokes={room.usersStrokes} course={golfCourse} />
+                    </GolfArray>
+                  </LoadingView>
                 </Center>
                 {/* <AllStrokes roomName={roomName} usersStrokes={room.usersStrokes}/> */}
               </ScrollView>

@@ -1,22 +1,21 @@
 import _ from 'lodash';
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { getAuth } from 'firebase/auth';
-import { getFirestore, getDoc, collection, query, orderBy, limit, startAfter, onSnapshot, doc, getDocs, setDoc, updateDoc, arrayUnion, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { getFirestore, getDoc, collection, query, orderBy, limit, startAfter, onSnapshot, doc, getDocs, setDoc, updateDoc, arrayUnion, DocumentData, DocumentSnapshot } from 'firebase/firestore';
 import GolfRoomScreen from './GolfRoomScreen';
 import { Modal, Button, Input, VStack, Text, FormControl, Box, Center, NativeBaseProvider, Tooltip, AlertDialog, HStack, Link, FlatList, Spinner } from "native-base"
-import { GolfCourse, GolfGame, HomeStackParamList, HomeStackScreenProps } from "../../../types";
+import { GolfCourse, GolfGame, HomeStackParamList, HomeStackScreenProps, SavedRoom } from "../../../types";
 import { StatusBar, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import gamesData from "../../../gamesData";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAppDispatch, useAppSelector } from "../../../hooks/selectorAndDispatch";
 import { BackButton, Header, UsersBar } from "../../../components";
-import useRoom from "../../../hooks/useRoom";
-import useUser from '../../../hooks/useUser';
-import useGolfCourse from '../../../hooks/useGolfCourse';
+import { useRoom, useUser, useGolfCourse } from '../../../hooks/useFireGet';
 import { getBetScores, getColor, getColorType } from "../../../utils/golfUtils";
 import { tryAsync } from '../../../utils/asyncUtils';
-import { addSavedRooms, SavedRoom } from '../../../redux/slices/gamesHistory';
+import { addSavedRooms } from '../../../redux/features/gamesHistory';
+import { formatData } from '../../../utils/dateUtils';
 
 const RoomModalButtons = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -32,8 +31,14 @@ const RoomModalButtons = () => {
   
   const handleRoomError = () => setErrorIsOpen(true);
 
+  const createRoomChecks = () => {
+    if (!(roomName.length > 0 && roomName.length < 30)) return false;
+    if (password.length === 0) return false;
+    return true;
+  }
+
   const handleCreateRoom = () => {
-    if (!(roomName.length > 0 && roomName.length < 30)) return handleRoomError();
+    if (!createRoomChecks) return handleRoomError();
 
     const db = getFirestore();
     const roomRef = doc(db, 'rooms', roomName);
@@ -51,7 +56,7 @@ const RoomModalButtons = () => {
         const golfGame: GolfGame = {
           id: '',
           userIds: [],
-          dateCreated: new Date(),
+          dateCreated: '',
           dateEnded: null,
           gameId: gamesData.golf.id,
           gameOwnerUserId: userId,
@@ -231,8 +236,8 @@ interface RoomViewProps {
 };
 
 const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
-  const room = useRoom(roomName);
-  const golfCourse = useGolfCourse(room?.golfCourseId);
+  const [room, roomIsLoading] = useRoom(roomName);
+  const [golfCourse, golfCourseIsLoading] = useGolfCourse(room?.golfCourseId);
 
   const renderItem = useCallback(([uid, userFinalScore]) => 
     <FinalScoreTile key={uid} userId={uid} userFinalScore={userFinalScore} />
@@ -274,7 +279,7 @@ const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
         <HStack justifyContent={'space-between'} alignItems={'center'} space={3} paddingBottom={2} borderBottomWidth={1} borderColor={'gray.200'}>
           <VStack width={70}>
             <Text fontWeight={'semibold'} numberOfLines={1}>{roomName}</Text>
-            <Text fontWeight={'thin'} fontSize={12}>{(room.dateCreated as any).toDate().toLocaleDateString()}</Text>
+            <Text fontWeight={'thin'} fontSize={12}>{new Date(room.dateCreated).toLocaleDateString()}</Text>
           </VStack>
           <UsersBar userIds={room.userIds} size="sm" limit={5}/>
         </HStack>
@@ -294,10 +299,10 @@ const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
 };
 
 const FinalScoreTile = ({ userId, userFinalScore }: { userId: string, userFinalScore: number }) => {
-  const username = useUser(userId)?.name;
+  const [user, userIsLoading] = useUser(userId);
   return (
     <Center width={70} margin={2}>
-      <Text numberOfLines={1}>{username}</Text>
+      <Text numberOfLines={1}>{user?.name}</Text>
       <Center bg={getColor(getColorType({ num: userFinalScore, arrType: 'Bet' }))} width={50} height={50} marginTop={3} rounded={10}>
         <Text fontSize={18} fontWeight={'semibold'}>{userFinalScore > 0 ? `+${userFinalScore}` : userFinalScore}</Text>
       </Center>
@@ -311,15 +316,16 @@ interface GolfHistoryScreenProps {
 };
 
 const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
-  // const [savedRooms, setSavedRooms] = useState<SavedRoom[]>([]);
-  // const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData>>();
-
-  const { savedRooms, lastVisible } = useAppSelector(state => state.gamesHistory.golf);
+  const { savedRooms, lastVisibleId } = useAppSelector(state => state.gamesHistory.golf);
+  const [lastVisible, setLastVisible] = useState<DocumentSnapshot<DocumentData> | null | undefined>();
   const dispatch = useAppDispatch();
 
   const [loading, setLoading] = useState(false);
   const [noMoreRooms, setNoMoreRooms] = useState(false);
   const [roomNameDetailed, setRoomNameDetailed] = useState<string>();
+
+  const db = getFirestore();
+  const golfHistoryRef = collection(db, 'users', userId, 'golfHistory');
   
   useEffect(() => {
     getSavedRooms();
@@ -327,30 +333,37 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
 
   const getSavedRooms = async () => {
     if (loading) return;
+
     setLoading(true);
-    const golfHistoryRef = collection(getFirestore(), 'users', userId, 'golfHistory');
-    const q = lastVisible == undefined
+
+    let trueLast = lastVisible;
+    if (lastVisibleId && !lastVisible) {
+      const [initialLastVisible, err] = await tryAsync(getDoc(doc(golfHistoryRef, lastVisibleId)));
+      trueLast = initialLastVisible;
+    }
+
+    const q = trueLast == undefined
       ? query(golfHistoryRef, orderBy("dateSaved"), limit(1))
-      : query(golfHistoryRef, orderBy("dateSaved"), startAfter(lastVisible), limit(1));
+      : query(golfHistoryRef, orderBy("dateSaved"), startAfter(trueLast), limit(1));
 
     const [documentSnapshots, err] = await tryAsync(getDocs(q));
     if (!documentSnapshots) return;
 
     // if no more past games
-    if (!documentSnapshots.docs.length) {
-      setNoMoreRooms(true);
-      setLoading(false);
-      return;
+    if (!documentSnapshots.docs.length) setNoMoreRooms(true);
+    else {
+      console.log("Got saved rooms");
+      const newSavedRooms = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as SavedRoom));
+      newSavedRooms.forEach(savedRoom => formatData(savedRoom));
+
+      const newLastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      dispatch(addSavedRooms({
+        gameId: 'golf',
+        savedRooms: newSavedRooms,
+        lastVisibleId: newLastVisible.id
+      }));
+      setLastVisible(newLastVisible);
     }
-    console.log("Got saved rooms");
-    const newSavedRooms = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as SavedRoom));
-    // setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
-    // setSavedRooms([...savedRooms, ...newSavedRooms]);
-    dispatch(addSavedRooms({
-      gameId: 'golf',
-      savedRooms: newSavedRooms,
-      lastVisible: documentSnapshots.docs[documentSnapshots.docs.length - 1]
-    }));
     setLoading(false);
   };
 
@@ -364,14 +377,22 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
     navigation.navigate("Games");
   };
 
+  const header = useMemo(() =>
+    <Header>
+      <HStack alignItems={'center'} justifyContent={'space-between'}>
+        <BackButton onPress={handleBackButton} />
+        <RoomModalButtons />
+      </HStack>
+    </Header>
+    , [roomNameDetailed]);
+
+  const renderItem = useCallback(({ item }) =>
+    <RoomView roomName={item.id} setRoomNameDetailed={setRoomNameDetailed} userId={userId} />
+    , []);
+
   return (
     <Box flex={1} width={'100%'}>
-      <Header>
-        <HStack alignItems={'center'} justifyContent={'space-between'}>
-          <BackButton onPress={handleBackButton} />
-          <RoomModalButtons />
-        </HStack>
-      </Header>
+      {header}
       {roomNameDetailed
         ? <GolfRoomScreen
           roomName={roomNameDetailed}
@@ -380,7 +401,7 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
         />
         : <FlatList
           data={savedRooms}
-          renderItem={({ item }) => <RoomView roomName={item.id} setRoomNameDetailed={setRoomNameDetailed} userId={userId} />}
+          renderItem={renderItem}
           keyExtractor={(item, i) => item.id + i}
           onEndReached={onEndReached}
           onEndReachedThreshold={0.5}

@@ -6,12 +6,13 @@ import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GolfArray } from '../../../components';
-import useUser from '../../../hooks/useUser';
+import { useUser } from '../../../hooks/useFireGet';
 
 const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
   const db = getFirestore();
 
   const [courses, setCourses] = useState<Array<GolfCourse>>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState("");
 
   // const addCourse = () => {
   //   const colRef = collection(db, 'golfCourses');
@@ -58,16 +59,6 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
       });
   };
 
-  const [selectedCourseId, setSelectedCourseId] = useState("");
-  
-  const renderItem = useCallback(({ item }: { item: GolfCourse }) => (
-    <TouchableOpacity onPress={() => setSelectedCourseId(item.id)}>
-      <Box padding={30} bgColor={selectedCourseId === item.id ? "amber.100" : "white"}>
-        <Text>{item.name}</Text>
-      </Box>
-    </TouchableOpacity>
-  ), []);
-
   return (
     <>
       {userId === room.gameOwnerUserId
@@ -78,7 +69,13 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
           <Box flex={1}>
             <FlatList
               data={courses}
-              renderItem={renderItem}
+              renderItem={({ item }: { item: GolfCourse }) => (
+                <TouchableOpacity onPress={() => setSelectedCourseId(item.id)}>
+                  <Box padding={30} bgColor={selectedCourseId === item.id ? "amber.100" : "white"}>
+                    <Text>{item.name}</Text>
+                  </Box>
+                </TouchableOpacity>
+              )}
               keyExtractor={(item) => item.id}
             />
           </Box>
@@ -195,10 +192,10 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
   const db = getFirestore();
   const roomRef = doc(db, 'rooms', roomName);
 
-  const [course, setCourse] = useState({} as GolfCourse);
+  const [course, setCourse] = useState<GolfCourse>();
 
   useEffect(() => {
-    if (!room.golfCourseId) return;
+    if (!room.golfCourseId || !course) return;
     getDoc(doc(db, 'golfCourses', room.golfCourseId))
       .then(res => {
         // set golf course
@@ -248,8 +245,8 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
         backCount: 0,
         locked: false
       };
-    const user = useUser(userId);
-    const otherUser = useUser(id);
+    const [user, userIsLoading] = useUser(userId);
+    const [otherUser, otherUserIsLoading] = useUser(id);
     if (!user || !otherUser) return null;
     const handicapRowProps: HandicapRowProps = { user, otherUser, roomName, handicapInfo, flipped, pairId };
     return <HandicapRow {...handicapRowProps} />;
@@ -296,13 +293,11 @@ interface GolfPrepScreenProps {
 };
 
 const GolfPrepScreen = (props: GolfPrepScreenProps) => {
-  console.log(props)
   return (
     <Box flex={1}>
       {props.room.golfCourseId
         ? <GolfHandicapScreen {...props} /> 
-        : <GolfCourseScreen {...props} />
-      }
+        : <GolfCourseScreen {...props} />}
     </Box>
   );
 };
