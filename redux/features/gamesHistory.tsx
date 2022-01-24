@@ -35,6 +35,7 @@ export const gamesHistorySlice = createSlice({
       const { gameId, savedRooms, lastVisibleId } = action.payload;
       state[gameId].savedRooms.push(...savedRooms);
       state[gameId].lastVisibleId = lastVisibleId;
+      console.log(state)
     },
     deleteSavedRooms: (state, action: PayloadAction<keyof GamesDataType>) => {
       const gameId = action.payload;

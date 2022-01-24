@@ -4,14 +4,8 @@ import { Box, FlatList, Heading, Avatar, HStack, VStack, Stack, AspectRatio, Ima
 import gamesData, { GameDataType, GamesDataType } from '../gamesData';
 
 const GamesScreen = ({ navigation }: HomeStackScreenProps<'Games'>) => {
-  const gamesImagePath = '../assets/images/games/';
-
   const handlePress = (itemId: string) => {
-    navigation.navigate("Game", {
-      gameId: itemId
-    } as {
-      gameId: keyof GamesDataType;
-    });
+    navigation.navigate("Game", { gameId: itemId } as { gameId: keyof GamesDataType; });
   };
 
 
@@ -19,7 +13,7 @@ const GamesScreen = ({ navigation }: HomeStackScreenProps<'Games'>) => {
     return a.name < b.name ? -1 : a.name === b.name ? 0 : 1;
   });
 
-  const renderItem = useCallback(({ item }) => (
+  const renderItem = useCallback(({ item }: { item: GameDataType }) => (
     <Pressable onPress={() => handlePress(item.id)}>
       <Box
         alignSelf="center"
@@ -43,7 +37,7 @@ const GamesScreen = ({ navigation }: HomeStackScreenProps<'Games'>) => {
       >
         {/* Aspect ratio is buggy */}
         <Image
-          source={require('../assets/images/games/golf_bg.jpg')}
+          source={item.imagePath}
           alt="image"
           height={200}
           width="100%"

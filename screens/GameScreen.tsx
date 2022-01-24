@@ -13,16 +13,12 @@ const GameScreen = (props: HomeStackScreenProps<'Game'>) => {
     }
   }, []);
 
-  const gamesImagePath = '../assets/images/games/';
-
   const renderGame = (gameId: string) => {
     switch (gameId) {
       case "golf":
-        const bgImg = gamesData[gameId].imageName;
-        const path = gamesImagePath + bgImg;
         return (
           <ImageBackground
-            source={require('../assets/images/games/golf_bg.jpg')}
+            source={gamesData[gameId].imagePath}
             resizeMode="cover"
             style={{ flex: 1, backgroundColor: '#eeeeee' }}
             imageStyle={{ opacity: 0.4 }}

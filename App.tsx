@@ -9,10 +9,13 @@ import Navigation from './navigation';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { StatusBar, LogBox, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 LogBox.ignoreLogs(['Setting a timer for a long period of time'])
 
 import { initializeApp } from "firebase/app";
+import { initializeAuth } from 'firebase/auth';
+import { getReactNativePersistence } from 'firebase/auth/react-native';
 
 import { SSRProvider } from '@react-aria/ssr';
 
@@ -28,6 +31,10 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Provide it to initializeAuth.
+const auth = initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
+LogBox.ignoreLogs(['AsyncStorage has been extracted from react-native core and will be removed in a future release']); 
 
 const config = {
   useSystemColorMode: false,

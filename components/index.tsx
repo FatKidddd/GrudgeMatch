@@ -6,6 +6,7 @@ import ConfirmModal from "./ConfirmModal";
 import BackButton from "./BackButton";
 import Header from "./Header";
 import LoadingView from "./LoadingView";
+import GoogleSvg from "./GoogleSvg";
 
 export {
   RoomDetails,
@@ -19,5 +20,6 @@ export {
   ConfirmModal,
   BackButton,
   Header,
-  LoadingView
+  LoadingView,
+  GoogleSvg
 };

@@ -126,7 +126,7 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
   , []);
 
   return (
-    <VStack rounded={20} bg='white' padding={15} marginBottom={5}>
+    <Box paddingX={5}>
       <HStack alignItems='center'>
         {!room.gameEnded
           ? <TouchableOpacity onPress={handleBack}>
@@ -145,7 +145,7 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
           : null}
       </HStack>
       {sortedUserIds.map(renderItem)} 
-    </VStack>
+    </Box>
   );
 });
 
@@ -210,7 +210,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
       (async () => {
         const [res, err] = await tryAsync(updateDoc(roomRef, {
           gameEnded: true,
-          dateEnded: new Date(),
+          dateEnded: new Date().toJSON(),
           password: deleteField()
         }));
         if (res) console.log("Game ended");
@@ -257,13 +257,14 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
 
     // if fail to save, room name will still be there, so user when entering golf game will trigger the save function
     setDoc(docRef, {
-      dateSaved: new Date()
+      dateSaved: new Date().toJSON()
     })
       .then(res => {
         console.log("Room id saved");
         toast.show({
           title: 'Game saved!',
           status: 'success',
+          description: 'You can now leave the room'
         });
       })
       .catch(err => {
@@ -306,25 +307,27 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
       <Box flex={1} width="100%" paddingX={15}>
         {loading
           ? <Center flex={1}>
-            <Spinner size="lg"/>
+            <Spinner size="lg" />
           </Center>
           : <>
             {/* check that room has a golf course and that all handicap between pairs has been chosen */}
             {room.golfCourseId && room.prepDone
               ?
               <ScrollView paddingTop={3}>
-                <LoadingView isLoading={courseIsLoading}>
-                  {showTransitionScoreboard
-                    ? <TransitionScoreboard
-                      userId={userId}
-                      room={room}
-                      roomName={roomName}
-                      setShowTransitionScoreboard={setShowTransitionScoreboard}
-                      course={golfCourse}
-                    />
-                    : <InputBox {...inputBoxProps} />
-                  }
-                </LoadingView>
+                <Box bg={'white'} marginBottom={5} rounded={20} paddingY={5}>
+                  <LoadingView isLoading={courseIsLoading}>
+                    {showTransitionScoreboard
+                      ? <TransitionScoreboard
+                        userId={userId}
+                        room={room}
+                        roomName={roomName}
+                        setShowTransitionScoreboard={setShowTransitionScoreboard}
+                        course={golfCourse}
+                      />
+                      : <InputBox {...inputBoxProps} />
+                    }
+                  </LoadingView>
+                </Box>
                 <Center padding={5} rounded={20} bg={'white'}>
                   <Text fontSize={18} fontWeight={'semibold'} marginBottom={3}>All Strokes</Text>
                   <LoadingView isLoading={courseIsLoading}>
@@ -401,48 +404,49 @@ const InputBox = ({ room, roomName, golfCourse, userId, holeNumber, setShowTrans
 
   let bg = par ? getColor(getColorType({ num: inputVal, arrType: 'Stroke', compareNumber: par })) : 'gray.100';
 
+  if (inputLoading) {
+    return (
+      <Center marginY={5}>
+        <Spinner size="lg" />
+      </Center>
+    );
+  }
   return (
-    <Center bg={'white'} marginBottom={5} rounded={20} paddingY={5}>
-      {inputLoading
-        ? <Center marginY={5}>
-          <Spinner size="lg" />
+    <Center>
+      <Box>
+        <Text fontSize={40}>Hole: {holeNumber}</Text>
+      </Box>
+      <Box>
+        <Text fontSize={20}>Par: {par}</Text>
+      </Box>
+      <Center marginY={5}>
+        <Box
+          size={120}
+          rounded={40}
+          alignItems='center'
+          justifyContent='center'
+          marginBottom={5}
+          borderColor={bg}
+          borderWidth={5}
+        >
+          <Text fontSize={50}>{inputVal}</Text>
+        </Box>
+        <HStack space={5}>
+          <TouchableOpacity onPress={decrement}>
+            <Entypo name="minus" size={50} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={increment}>
+            <Entypo name="plus" size={50} />
+          </TouchableOpacity>
+        </HStack>
+      </Center>
+      <HStack>
+        {/* bg='yellow.100'  */}
+        <Center flex={1}>
+          <Text fontSize={18}>{strokeDescription}</Text>
         </Center>
-        : <>
-          <Box>
-            <Text fontSize={40}>Hole: {holeNumber}</Text>
-          </Box>
-          <Box>
-            <Text fontSize={20}>Par: {par}</Text>
-          </Box>
-          <Center marginY={5}>
-            <Box
-              size={120}
-              rounded={40}
-              alignItems='center'
-              justifyContent='center'
-              marginBottom={5}
-              borderColor={bg}
-              borderWidth={5}
-            >
-              <Text fontSize={50}>{inputVal}</Text>
-            </Box>
-            <HStack space={8}>
-              <TouchableOpacity onPress={decrement}>
-                <Entypo name="minus" size={50} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={increment}>
-                <Entypo name="plus" size={50} />
-              </TouchableOpacity>
-            </HStack>
-          </Center>
-          <HStack>
-            {/* bg='yellow.100'  */}
-            <Center flex={1}>
-              <Text fontSize={18}>{strokeDescription}</Text>
-            </Center>
-            <Button marginRight={5} onPress={updateUserStrokes}>Done</Button>
-          </HStack>
-        </>}
+        <Button marginRight={5} onPress={updateUserStrokes}>Done</Button>
+      </HStack>
     </Center>
   );
 };

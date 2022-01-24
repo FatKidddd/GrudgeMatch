@@ -1,5 +1,7 @@
 import React, { useRef } from 'react';
 import { AlertDialog, Button } from 'native-base';
+import { useAppDispatch } from '../hooks/selectorAndDispatch';
+import { deleteSavedRooms } from '../redux/features/gamesHistory';
 
 interface ConfirmModalProps {
   onClose: () => void;
@@ -11,6 +13,7 @@ interface ConfirmModalProps {
 
 const ConfirmModal = ({ isOpen, onClose, callback, headerDesc, buttonDesc }: ConfirmModalProps) => {
   const cancelRef = useRef(null);
+  const dispatch = useAppDispatch();
 
   return (
     <AlertDialog
@@ -25,8 +28,9 @@ const ConfirmModal = ({ isOpen, onClose, callback, headerDesc, buttonDesc }: Con
           <Button
             colorScheme="danger"
             onPress={() => {
-              callback();
               onClose();
+              dispatch(deleteSavedRooms('golf'));
+              callback();
             }}
             ref={cancelRef}
           >

@@ -1,82 +1,170 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { getDoc, updateDoc, getDocs, getFirestore, collection, doc, addDoc } from 'firebase/firestore';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { getDoc, updateDoc, getDocs, getFirestore, collection, doc, addDoc, DocumentSnapshot, DocumentData, query, limit, startAfter, orderBy } from 'firebase/firestore';
 import { User, GolfCourse, GolfGame, HandicapInfo } from '../../../types';
-import { Box, FlatList, Heading, Avatar, HStack, VStack, Text, Spacer, Center, Button, Input, Pressable, ScrollView } from "native-base";
+import { Box, FlatList, Heading, Avatar, HStack, VStack, Text, Spacer, Center, Button, Input, Pressable, ScrollView, Spinner } from "native-base";
 import { TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GolfArray } from '../../../components';
-import { useUser } from '../../../hooks/useFireGet';
+import { GolfArray, LoadingView } from '../../../components';
+import { useGolfCourse, useUser } from '../../../hooks/useFireGet';
+import { useAppDispatch, useAppSelector } from '../../../hooks/selectorAndDispatch';
+import { tryAsync } from '../../../utils/asyncUtils';
+import { setGolfCourse } from '../../../redux/features/golfCourses';
+    let json = require('./data.json');
+
+interface CourseViewProps {
+  golfCourseId: string;
+  setSelectedCourseId: (id: string) => void;
+  selectedCourseId: string;
+}
+
+const CourseView = ({ golfCourseId, setSelectedCourseId, selectedCourseId }: CourseViewProps) => {
+  const [golfCourse, golfCourseIsLoading] = useGolfCourse(golfCourseId);
+  if (!golfCourse) return null;
+  const canSelect = golfCourse.parArr.length === 18;
+  const isSelected = selectedCourseId === golfCourseId;
+  const handleOnPress = () => setSelectedCourseId(isSelected ? '' : golfCourse.id);
+  return (
+    <Box padding={15} bgColor={'white'} shadow={3} rounded={20} marginBottom={3}>
+      <LoadingView isLoading={golfCourseIsLoading}>
+        <HStack justifyContent={'space-between'} alignItems={'center'} marginBottom={1}>
+          <Box flex={1}>
+            <Text fontSize={18} fontWeight={'semibold'}>{golfCourse.name}</Text>
+          </Box>
+          {canSelect
+            ? <TouchableOpacity onPress={handleOnPress}>
+              <AntDesign name={isSelected ? 'checkcircle' : 'checkcircleo'} size={30} color={isSelected ? 'green' : 'gray'} />
+            </TouchableOpacity>
+            : null}
+        </HStack>
+        <Box width={'100%'} alignItems={'flex-start'} marginBottom={3}>
+          <Text>{golfCourse.location}</Text>
+        </Box>
+        {canSelect
+          ? <GolfArray course={golfCourse} />
+          : null}
+      </LoadingView>
+    </Box>
+  );
+};
 
 const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
-  const db = getFirestore();
-
-  const [courses, setCourses] = useState<Array<GolfCourse>>([]);
+  const [golfCourseIds, setGolfCourseIds] = useState<Array<string>>([]);
   const [selectedCourseId, setSelectedCourseId] = useState("");
+  const [lastVisible, setLastVisible] = useState<DocumentSnapshot<DocumentData> | null | undefined>();
+  const [loading, setLoading] = useState(false);
+  const [noMore, setNoMore] = useState(false);
 
-  // const addCourse = () => {
-  //   const colRef = collection(db, 'golfCourses');
-  //   addDoc(colRef, {
-  //     name: "ass",
-  //     location: "penis",
-  //     parArr: [4, 4, 5, 3, 4, 4, 3, 4, 5, 4, 3, 4, 5, 5, 4, 4, 3, 4],
-  //     handicapIndexArr: [12, 4, 2, 16, 8, 10, 18, 14, 6, 5, 15, 1, 11, 7, 17, 9, 13, 3],
-  //   });
-  // };
+  const db = getFirestore();
+  const dispatch = useAppDispatch();
 
-  // useEffect(() => {
-  //   addCourse();
-  // }, []);
+  const addCourse = () => {
+    const colRef = collection(db, 'golfCourses');
+    // addDoc(colRef, {
+    //   name: "ass",
+    //   location: "penis",
+    //   parArr: [4, 4, 5, 3, 4, 4, 3, 4, 5, 4, 3, 4, 5, 5, 4, 4, 3, 4],
+    //   handicapIndexArr: [12, 4, 2, 16, 8, 10, 18, 14, 6, 5, 15, 1, 11, 7, 17, 9, 13, 3],
+    // });
+  };
+
+  const isMounted = useRef(true);
 
   useEffect(() => {
-    if (userId != room.gameOwnerUserId) return;
-    const coursesRef = collection(db, 'golfCourses'); // may need to fix in the future when i properly organise this
-    getDocs(coursesRef)
-      .then(docs => {
-        docs.forEach(doc => {
-          const data = {
-            ...doc.data(),
-            id: doc.id,
-          };
-          setCourses([...courses, data] as Array<GolfCourse>);
-        });
-      })
-      .catch(err => {
-        console.error(err);
-      });
+    getGolfCourses();
+    // addCoursesFromJson();
+    () => isMounted.current = false;
   }, []);
+
+  const addCoursesFromJson = () => {
+    // console.log(json);
+    // console.log("hi")
+    const colRef = collection(db, 'golfCourses');
+    for (const obj of json) {
+      // console.log(obj)
+      addDoc(colRef, obj);
+    }
+    // addDoc(colRef, {
+    //   name: "ass",
+    //   location: "penis",
+    //   parArr: [4, 4, 5, 3, 4, 4, 3, 4, 5, 4, 3, 4, 5, 5, 4, 4, 3, 4],
+    //   handicapIndexArr: [12, 4, 2, 16, 8, 10, 18, 14, 6, 5, 15, 1, 11, 7, 17, 9, 13, 3],
+    // });
+  };
+
+  const getGolfCourses = async () => {
+    if (loading || userId !== room.gameOwnerUserId) return;
+
+    setLoading(true);
+
+    const golfCoursesRef = collection(db, 'golfCourses');
+    const q = lastVisible == undefined
+      ? query(golfCoursesRef, orderBy("name"), limit(3))
+      : query(golfCoursesRef, orderBy("name"), startAfter(lastVisible), limit(3));
+
+    const [documentSnapshots, err] = await tryAsync(getDocs(q));
+    if (!documentSnapshots) return;
+
+    // if no more past games
+    if (!documentSnapshots.docs.length) setNoMore(true);
+    else {
+      // update golfCourse cache
+      if (!isMounted) return;
+      console.log("Got golf courses");
+      const newGolfCourses = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as GolfCourse));
+      // may need to make this async?
+      newGolfCourses.forEach(newGolfCourse => {
+        dispatch(setGolfCourse(newGolfCourse));
+      });
+
+      // update lastVisible
+      const newLastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      setLastVisible(newLastVisible);
+
+      // add golfCourseIds
+      const newGolfCourseIds = newGolfCourses.map(newGolfCourse => newGolfCourse.id); 
+      setGolfCourseIds([...golfCourseIds, ...newGolfCourseIds]);
+    }
+    if (!isMounted) return;
+    setLoading(false);
+  };
+
+  const onEndReached = () => {
+    if (noMore) return;
+    getGolfCourses();
+  };
 
   const handleSubmit = () => {
     if (selectedCourseId.length === 0) return;
     updateDoc(doc(db, 'rooms', roomName), {
       golfCourseId: selectedCourseId
     })
-      .then(res => {
-        console.log("Course selected");
-      })
-      .catch(err => {
-        console.error(err);
-      });
+      .then(res => console.log("Course selected"))
+      .catch(err => console.error(err));
   };
 
   return (
     <>
       {userId === room.gameOwnerUserId
         ? <Box flex={1} marginBottom={5}>
-          <Center>
+          <Center width='100%' padding={1} rounded={20} bgColor={'white'} marginY={3}>
             <Text fontSize={18} fontWeight="500">Select course</Text>
           </Center>
           <Box flex={1}>
             <FlatList
-              data={courses}
-              renderItem={({ item }: { item: GolfCourse }) => (
-                <TouchableOpacity onPress={() => setSelectedCourseId(item.id)}>
-                  <Box padding={30} bgColor={selectedCourseId === item.id ? "amber.100" : "white"}>
-                    <Text>{item.name}</Text>
-                  </Box>
-                </TouchableOpacity>
+              data={golfCourseIds}
+              renderItem={({ item: golfCourseId }: { item: string }) => (
+                <CourseView
+                  golfCourseId={golfCourseId}
+                  setSelectedCourseId={setSelectedCourseId}
+                  selectedCourseId={selectedCourseId}
+                />
               )}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item, i) => item + i}
+              onEndReached={onEndReached}
+              onEndReachedThreshold={0.5}
+              initialNumToRender={5}
+              ListFooterComponent={loading ? <Spinner size="sm" /> : null}
             />
           </Box>
           <Box>
@@ -189,26 +277,10 @@ const HandicapRow = React.memo(({ user, otherUser, flipped, pairId, handicapInfo
 });
 
 const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => {
+  const [course, courseIsLoading] = useGolfCourse(room.golfCourseId);
+
   const db = getFirestore();
   const roomRef = doc(db, 'rooms', roomName);
-
-  const [course, setCourse] = useState<GolfCourse>();
-
-  useEffect(() => {
-    if (!room.golfCourseId || !course) return;
-    getDoc(doc(db, 'golfCourses', room.golfCourseId))
-      .then(res => {
-        // set golf course
-        const data = {
-          ...res.data(),
-          id: room.golfCourseId
-        } as GolfCourse;
-        setCourse(data);
-      })
-      .catch(err => {
-        console.error(err);
-      });
-  }, [room.golfCourseId]);
 
   const handleStart = () => {
     const req = room.userIds.length * (room.userIds.length - 1) / 2;

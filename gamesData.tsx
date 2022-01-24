@@ -1,7 +1,7 @@
 export interface GameDataType {
   id: string;
   name: string;
-  imageName: string;
+  imagePath: any;
 };
 
 export interface GamesDataType {
@@ -12,7 +12,7 @@ const gamesData: GamesDataType = {
   golf: {
     id: "golf",
     name: "Golf",
-    imageName: "golf_bg.jpg"
+    imagePath: require("./assets/images/games/golf_bg2.png")
   },
 };
 

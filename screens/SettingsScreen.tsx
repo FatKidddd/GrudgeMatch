@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Icon, Text, ScrollView, Center, Button, Avatar, HStack, Switch, useColorMode } from 'native-base';
+import { Icon, Text, ScrollView, Center, Button, Avatar, HStack, Switch, useColorMode, Spinner } from 'native-base';
 import { RootDrawerScreenProps } from '../types';
 import * as ImagePicker from "expo-image-picker";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject,  } from "firebase/storage";
@@ -22,11 +22,7 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
   const [deleteIsOpen, setDeleteIsOpen] = useState(false);
 
   const uid = getAuth().currentUser?.uid;
-  if (!uid) return null;
-  const db = getFirestore();
-  const userRef = doc(db, 'users', uid);
   const [user, userIsLoading] = useUser(uid);
-  if (!user) return null;
   const dispatch = useAppDispatch();
 
   // Firebase sets some timers for a long period, which will trigger some warnings. Let's turn that off for 
@@ -51,6 +47,17 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
     //   setHasPermission(status === 'granted');
     // })();
   }, []);
+
+  if (!uid || !user) {
+    return (
+      <Center flex={1}>
+        <Spinner size="lg" />
+      </Center>
+    );
+  }
+
+  const db = getFirestore();
+  const userRef = doc(db, 'users', uid);
 
   const uploadImageAsync = async (uri: string) => {
     // Why are we using XMLHttpRequest? See:

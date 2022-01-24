@@ -19,6 +19,16 @@ export const golfCoursesSlice = createSlice({
       const golfCourseId = action.payload;
       delete state[golfCourseId];
     },
+    clearGolfCourses: (state) => {
+      state = {};
+    },
+    // addGolfCourseIds: (state, action: PayloadAction<Array<string>>) => {
+    //   const ids = action.payload;
+    //   state.ids.push(...ids);
+    // },
+    // deleteGolfCourseIds: (state) => {
+    //   state.ids = [];
+    // }
   },
 });
 

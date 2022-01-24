@@ -54,16 +54,15 @@ const RoomModalButtons = () => {
         if (!userId) return handleRoomError();
         
         const golfGame: GolfGame = {
-          id: '',
+          id: roomName,
           userIds: [],
-          dateCreated: '',
+          dateCreated: new Date().toJSON(),
           dateEnded: null,
           gameId: gamesData.golf.id,
           gameOwnerUserId: userId,
           bannedUserIds: [],
           password,
           usersStrokes: {},
-          usersStrokesParBirdieCount: {},
           pointsArr: {},
           prepDone: false,
           gameEnded: false
@@ -124,73 +123,37 @@ const RoomModalButtons = () => {
         onClose={() => setModalVisible(false)}
         size="lg"
       >
-        {createOrJoin
-          ?
-          <Modal.Content>
-            <Modal.CloseButton />
-            <Modal.Header>Create room</Modal.Header>
-            <Modal.Body>
-              You need to create a room for every golf course.
-              <FormControl mt="3">
-                <FormControl.Label>Room Name</FormControl.Label>
-                <Input value={roomName} onChangeText={val => setRoomName(val)}/>
-              </FormControl>
-              <FormControl mt="3">
-                <FormControl.Label>Password</FormControl.Label>
-                <Input
-                  value={password}
-                  onChangeText={val => setPassword(val)}
-                  type={show ? "text" : "password"}
-                  InputRightElement={
-                    <Button size="xs" rounded="none" onPress={handleClick}>
-                      {show ? "Hide" : "Show"}
-                    </Button>
-                  }
-                />
-              </FormControl>
-            </Modal.Body>
-            <Link onPress={() => setCreateOrJoin(!createOrJoin)} marginY="2" alignSelf="center" _text={{ color: "blue.400" }}>
-              {createOrJoin ? "Join an existing room instead" : "Create a new room"}
-            </Link>
-            <Modal.Footer>
-              <Button flex="1" onPress={handleCreateRoom}>
-                Create
-              </Button>
-            </Modal.Footer>
-          </Modal.Content>
-
-          : <Modal.Content>
-            <Modal.CloseButton />
-            <Modal.Header>Join room</Modal.Header>
-            <Modal.Body>
-              <FormControl mt="3">
-                <FormControl.Label>Room Name</FormControl.Label>
-                <Input value={roomName} onChangeText={val => setRoomName(val)}/>
-              </FormControl>
-              <FormControl mt="3">
-                <FormControl.Label>Password</FormControl.Label>
-                <Input
-                  value={password}
-                  onChangeText={val => setPassword(val)}
-                  type={show ? "text" : "password"}
-                  InputRightElement={
-                    <Button size="xs" rounded="none" onPress={handleClick}>
-                      {show ? "Hide" : "Show"}
-                    </Button>
-                  }
-                />
-              </FormControl>
-            </Modal.Body>
-            <Link onPress={() => setCreateOrJoin(!createOrJoin)} marginY="2" alignSelf="center" _text={{ color: "blue.400" }}>
-              {createOrJoin ? "Join an existing room instead" : "Create a new room"}
-            </Link>
-            <Modal.Footer>
-              <Button flex="1" onPress={handleJoinRoom}>
-                Join
-              </Button>
-            </Modal.Footer>
-          </Modal.Content>
-        }
+        <Modal.Content>
+          <Modal.CloseButton />
+          <Modal.Header>{createOrJoin ? 'Create room' : 'Join room'}</Modal.Header>
+          <Modal.Body>
+            {createOrJoin ? 'You need to create a room for every golf course.' : null}
+            <FormControl mt="3">
+              <FormControl.Label>Room Name</FormControl.Label>
+              <Input value={roomName} onChangeText={val => setRoomName(val)} />
+            </FormControl>
+            <FormControl mt="3">
+              <FormControl.Label>Password</FormControl.Label>
+              <Input
+                value={password}
+                onChangeText={val => setPassword(val)}
+                type={show ? "text" : "password"}
+                InputRightElement={
+                  <Button onPress={() => setShow(!show)}>
+                    <Ionicons size={20} name={!show ? "eye-outline" : "eye-off-outline"} />
+                  </Button>}
+              />
+            </FormControl>
+          </Modal.Body>
+          <Link onPress={() => setCreateOrJoin(!createOrJoin)} marginY="2" alignSelf="center" _text={{ color: "blue.400" }}>
+            {createOrJoin ? "Join an existing room instead" : "Create a new room"}
+          </Link>
+          <Modal.Footer>
+            <Button flex="1" onPress={createOrJoin ? handleCreateRoom : handleJoinRoom}>
+              {createOrJoin ? 'Create' : 'Join'}
+            </Button>
+          </Modal.Footer>
+        </Modal.Content>
       </Modal>
 
       <AlertDialog
@@ -222,11 +185,11 @@ const RoomModalButtons = () => {
             setModalVisible(!modalVisible);
           }}
         >
-          <Ionicons name="add" size={30}/>
+          <Ionicons name="add" size={30} />
         </TouchableOpacity>
       </HStack>
     </>
-  )
+  );
 };
 
 interface RoomViewProps {
@@ -238,10 +201,6 @@ interface RoomViewProps {
 const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
   const [room, roomIsLoading] = useRoom(roomName);
   const [golfCourse, golfCourseIsLoading] = useGolfCourse(room?.golfCourseId);
-
-  const renderItem = useCallback(([uid, userFinalScore]) => 
-    <FinalScoreTile key={uid} userId={uid} userFinalScore={userFinalScore} />
-  , []);
 
   if (!room || !room.userIds || !golfCourse) return null;
 
@@ -285,7 +244,10 @@ const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
         </HStack>
         <HStack justifyContent={'space-evenly'} alignItems={'center'}>
           {// limit to 4 long
-            _.zip(room.userIds, usersFinalScores).slice(0, FINAL_SCORES_LIMIT).map(renderItem)}
+            _.zip(room.userIds, usersFinalScores).slice(0, FINAL_SCORES_LIMIT).map(([uid, userFinalScore]) => {
+              if (!uid || userFinalScore === undefined) return null;
+              return <FinalScoreTile key={uid} userId={uid} userFinalScore={userFinalScore} />;
+            })}
 
           {room.userIds.length > FINAL_SCORES_LIMIT
             ? <Center>
@@ -343,8 +305,8 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
     }
 
     const q = trueLast == undefined
-      ? query(golfHistoryRef, orderBy("dateSaved"), limit(1))
-      : query(golfHistoryRef, orderBy("dateSaved"), startAfter(trueLast), limit(1));
+      ? query(golfHistoryRef, orderBy("dateSaved"), limit(5))
+      : query(golfHistoryRef, orderBy("dateSaved"), startAfter(trueLast), limit(5));
 
     const [documentSnapshots, err] = await tryAsync(getDocs(q));
     if (!documentSnapshots) return;
@@ -381,6 +343,7 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
     <Header>
       <HStack alignItems={'center'} justifyContent={'space-between'}>
         <BackButton onPress={handleBackButton} />
+        <Text fontWeight={'semibold'} fontSize={18}>Golf History</Text>
         <RoomModalButtons />
       </HStack>
     </Header>
@@ -399,13 +362,18 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
           navigation={navigation}
           isSavedView={true}
         />
-        : <FlatList
+        : savedRooms.length === 0
+          ? <Center flex={1} alignSelf={'center'}>
+            <Center width="90%" maxWidth={300} bg='white' padding={10} rounded={20}>
+              <Text textAlign={'center'}>You haven't played any golf games yet, click the plus icon to get started!</Text>
+            </Center>
+          </Center>
+          : < FlatList
           data={savedRooms}
           renderItem={renderItem}
           keyExtractor={(item, i) => item.id + i}
-          onEndReached={onEndReached}
-          onEndReachedThreshold={0.5}
-          initialNumToRender={5}
+          //onEndReached={onEndReached}
+          //onEndReachedThreshold={0.5}
           ListFooterComponent={loading ? <Spinner size="sm" /> : null}
         />}
     </Box>

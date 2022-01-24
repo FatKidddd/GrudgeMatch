@@ -124,9 +124,6 @@ export interface GolfGame extends Room {
   usersStrokes: {
     [userId: string]: GolfStrokes;
   }
-  usersStrokesParBirdieCount: {
-    [userId: string]: [number, number, number];
-  }
   pointsArr: {
     // userId1 + '-' + userId2
     [userPairId: string]: HandicapInfo;
@@ -144,7 +141,7 @@ export interface GolfCourse {
   id: string;
   location: string;
   name: string;
-  difficulty?: number;
+  clubName: string;
   parArr: Array<number>;
   handicapIndexArr: Array<number>;
 };
