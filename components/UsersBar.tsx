@@ -1,8 +1,15 @@
+import _ from 'lodash';
 import React from 'react';
-import { ScrollView, HStack, Avatar } from 'native-base';
+import { ScrollView, HStack, Avatar, Spinner } from 'native-base';
 import UserAvatar from './UserAvatar';
 
-const UsersBar = ({ userIds, size, limit }: { userIds: Array<string>, size?: "sm" | "md" | "lg", limit?: number }) => {
+interface UsersBarProps {
+  userIds: Array<string>;
+  size?: "sm" | "md" | "lg";
+  limit?: number;
+};
+
+const UsersBar = React.memo(({ userIds, size, limit }: UsersBarProps) => {
   return (
     <ScrollView
       horizontal
@@ -13,7 +20,6 @@ const UsersBar = ({ userIds, size, limit }: { userIds: Array<string>, size?: "sm
       bg='white'
     >
       {/* <Avatar.Group size="md"> */}
-      <HStack>
         {userIds.length !== 0
           ? userIds.slice(0, limit ? limit : undefined).map((userId, i) =>
             <UserAvatar
@@ -24,15 +30,16 @@ const UsersBar = ({ userIds, size, limit }: { userIds: Array<string>, size?: "sm
               size={size}
             />
           )
-          : <Avatar></Avatar>
+          : <Spinner size="sm" />
         }
         {limit && userIds.length && userIds.length - limit > 0
           ? <Avatar size={size ? size : "md"} zIndex={-99}>{`+${userIds.length - limit}`}</Avatar>
           : null}
-      </HStack>
       {/* </Avatar.Group> */}
     </ScrollView>
   );
-};
+}, (prevProps, nextProps) => {
+  return _.isEqual(prevProps.userIds, nextProps.userIds);
+});
 
 export default UsersBar;

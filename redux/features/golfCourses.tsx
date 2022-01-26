@@ -11,6 +11,12 @@ export const golfCoursesSlice = createSlice({
   name: 'golfCourses',
   initialState,
   reducers: {
+    addGolfCourses: (state, action: PayloadAction<GolfCourse[]>) => {
+      const golfCourses = action.payload;
+      for (const golfCourse of golfCourses) {
+        state[golfCourse.id] = golfCourse;
+      }
+    },
     setGolfCourse: (state, action: PayloadAction<GolfCourse>) => {
       const golfCourse = action.payload;
       state[golfCourse.id] = golfCourse;
@@ -32,6 +38,6 @@ export const golfCoursesSlice = createSlice({
   },
 });
 
-export const { setGolfCourse, deleteGolfCourse } = golfCoursesSlice.actions;
+export const { addGolfCourses, setGolfCourse, deleteGolfCourse } = golfCoursesSlice.actions;
 
 export default golfCoursesSlice.reducer;

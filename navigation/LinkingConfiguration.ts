@@ -13,6 +13,7 @@ const linking: LinkingOptions<RootStackParamList> = {
   prefixes: [Linking.makeUrl('/')],
   config: {
     screens: {
+      Loading: 'loading',
       Root: {
         screens: {
           Home: {
@@ -25,7 +26,6 @@ const linking: LinkingOptions<RootStackParamList> = {
           Settings: 'settings'
         },
       },
-      Loading: 'loading',
       Auth: 'auth'
     },
   },

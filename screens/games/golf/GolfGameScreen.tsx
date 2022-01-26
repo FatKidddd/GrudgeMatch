@@ -10,7 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import gamesData from "../../../gamesData";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAppDispatch, useAppSelector } from "../../../hooks/selectorAndDispatch";
-import { BackButton, Header, UsersBar } from "../../../components";
+import { BackButton, Header, LoadingView, UsersBar } from "../../../components";
 import { useRoom, useUser, useGolfCourse } from '../../../hooks/useFireGet';
 import { getBetScores, getColor, getColorType } from "../../../utils/golfUtils";
 import { tryAsync } from '../../../utils/asyncUtils';
@@ -140,7 +140,7 @@ const RoomModalButtons = () => {
                 type={show ? "text" : "password"}
                 InputRightElement={
                   <Button onPress={() => setShow(!show)}>
-                    <Ionicons size={20} name={!show ? "eye-outline" : "eye-off-outline"} />
+                    <Ionicons size={20} name={!show ? "eye-outline" : "eye-off-outline"} color='#eeeeee'/>
                   </Button>}
               />
             </FormControl>
@@ -198,28 +198,35 @@ interface RoomViewProps {
   userId: string;
 };
 
+// const Dummy = ({ userId }) => {
+//   const [user, _] = useUser(userId);
+//   return null;
+// };
+
 const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
   const [room, roomIsLoading] = useRoom(roomName);
   const [golfCourse, golfCourseIsLoading] = useGolfCourse(room?.golfCourseId);
+
 
   if (!room || !room.userIds || !golfCourse) return null;
 
   const n = room.userIds.length;
   const usersFinalScores: Array<number> = new Array(n).fill(0);
 
-  // swap user's and some random to make user's the first position
+  // swap user's and some random to make user's the first position (cannot mutate room so need to deepcopy below if you want)
+  const userIds = room.userIds.slice();
   for (let i = 1; i < n; i++) {
-    if (room.userIds[i] === userId) {
-      room.userIds[i] = room.userIds[0];
-      room.userIds[0] = userId;
+    if (userIds[i] === userId) {
+      userIds[i] = userIds[0];
+      userIds[0] = userId;
     }
   }
 
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
       if (i === j) continue;
-      const uid = room.userIds[i];
-      const oppUid = room.userIds[j];
+      const uid = userIds[i];
+      const oppUid = userIds[j];
       const { finalScore, finalScores } = getBetScores({
         userId: uid,
         oppUid,
@@ -232,28 +239,29 @@ const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
 
   const FINAL_SCORES_LIMIT = 4;
 
+
+  // there is a bug here where firebase get is called twice because UsersBar and FinalScoreTile both have useUser
+  
   return (
     <TouchableOpacity onPress={() => setRoomNameDetailed(roomName)} style={{ marginHorizontal: 10 }}>
       <Box width={'100%'} rounded={20} bg={'white'} padding={4} marginBottom={5}>
-        <HStack justifyContent={'space-between'} alignItems={'center'} space={3} paddingBottom={2} borderBottomWidth={1} borderColor={'gray.200'}>
+        <HStack justifyContent={'space-between'} alignItems={'center'} space={3} paddingBottom={2}>
+          {/* borderBottomWidth={1} borderColor={'gray.200'}> */}
           <VStack width={70}>
             <Text fontWeight={'semibold'} numberOfLines={1}>{roomName}</Text>
             <Text fontWeight={'thin'} fontSize={12}>{new Date(room.dateCreated).toLocaleDateString()}</Text>
           </VStack>
-          <UsersBar userIds={room.userIds} size="sm" limit={5}/>
+          <UsersBar userIds={userIds} size="sm" limit={5}/>
         </HStack>
-        <HStack justifyContent={'space-evenly'} alignItems={'center'}>
+        <HStack justifyContent={'space-evenly'} alignItems={'center'} marginTop={2}>
           {// limit to 4 long
-            _.zip(room.userIds, usersFinalScores).slice(0, FINAL_SCORES_LIMIT).map(([uid, userFinalScore]) => {
+            _.zip(userIds, usersFinalScores).slice(0, FINAL_SCORES_LIMIT).map(([uid, userFinalScore]) => {
               if (!uid || userFinalScore === undefined) return null;
               return <FinalScoreTile key={uid} userId={uid} userFinalScore={userFinalScore} />;
             })}
-
-          {room.userIds.length > FINAL_SCORES_LIMIT
-            ? <Center>
-              <Text>+{room.userIds.length - FINAL_SCORES_LIMIT} more</Text>
-            </Center>
-            : null}
+        </HStack>
+        <HStack marginTop={2} justifyContent={'flex-end'} alignItems={'center'}>
+          <Text>{userIds.length > FINAL_SCORES_LIMIT ? `+${userIds.length - FINAL_SCORES_LIMIT} more` : null}</Text>
         </HStack>
       </Box>
     </TouchableOpacity>
@@ -261,13 +269,15 @@ const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
 };
 
 const FinalScoreTile = ({ userId, userFinalScore }: { userId: string, userFinalScore: number }) => {
-  const [user, userIsLoading] = useUser(userId);
+  const [user, userIsLoading] = useUser(userId, true); //hacky fix
   return (
-    <Center width={70} margin={2}>
-      <Text numberOfLines={1}>{user?.name}</Text>
-      <Center bg={getColor(getColorType({ num: userFinalScore, arrType: 'Bet' }))} width={50} height={50} marginTop={3} rounded={10}>
-        <Text fontSize={18} fontWeight={'semibold'}>{userFinalScore > 0 ? `+${userFinalScore}` : userFinalScore}</Text>
-      </Center>
+    <Center width={70}>
+      <LoadingView isLoading={userIsLoading} alignItems={'center'}>
+        <Text numberOfLines={1}>{user?.name}</Text>
+        <Center bg={getColor(getColorType({ num: userFinalScore, arrType: 'Bet' }))} width={50} height={50} marginTop={3} rounded={10}>
+          <Text fontSize={18} fontWeight={'semibold'}>{userFinalScore > 0 ? `+${userFinalScore}` : userFinalScore}</Text>
+        </Center>
+      </LoadingView>
     </Center>
   );
 };
@@ -362,20 +372,22 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
           navigation={navigation}
           isSavedView={true}
         />
-        : savedRooms.length === 0
+        : noMoreRooms && savedRooms.length === 0
           ? <Center flex={1} alignSelf={'center'}>
             <Center width="90%" maxWidth={300} bg='white' padding={10} rounded={20}>
               <Text textAlign={'center'}>You haven't played any golf games yet, click the plus icon to get started!</Text>
             </Center>
           </Center>
-          : < FlatList
-          data={savedRooms}
-          renderItem={renderItem}
-          keyExtractor={(item, i) => item.id + i}
-          //onEndReached={onEndReached}
-          //onEndReachedThreshold={0.5}
-          ListFooterComponent={loading ? <Spinner size="sm" /> : null}
-        />}
+          : <Box marginTop={3}>
+            <FlatList
+              data={savedRooms}
+              renderItem={renderItem}
+              keyExtractor={(item, i) => item.id + i}
+              //onEndReached={onEndReached}
+              //onEndReachedThreshold={0.5}
+              ListFooterComponent={loading ? <Spinner size="sm" /> : null}
+            />
+          </Box>}
     </Box>
   );
 };

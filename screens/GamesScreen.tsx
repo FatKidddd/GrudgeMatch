@@ -8,7 +8,6 @@ const GamesScreen = ({ navigation }: HomeStackScreenProps<'Games'>) => {
     navigation.navigate("Game", { gameId: itemId } as { gameId: keyof GamesDataType; });
   };
 
-
   const data = Object.values(gamesData).sort((a: GameDataType, b: GameDataType) => {
     return a.name < b.name ? -1 : a.name === b.name ? 0 : 1;
   });

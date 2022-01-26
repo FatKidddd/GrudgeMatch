@@ -1,6 +1,6 @@
 import _ from 'lodash';
-import React from 'react';
-import { HStack, Center, Text, Box, ScrollView, VStack } from 'native-base';
+import React, { useMemo } from 'react';
+import { HStack, Center, Text, Box, ScrollView, VStack, Spinner } from 'native-base';
 import { GolfCourse, GolfStrokes, Stroke } from '../types';
 import { getColor, getColorType } from '../utils/golfUtils';
 import { useUser } from '../hooks/useFireGet';
@@ -83,7 +83,7 @@ const UsersStrokes = React.memo(({ usersStrokes, course }: UsersStrokesProps) =>
 
   const sortedStrokes = Object.entries(usersStrokes).sort();
   return (
-    <VStack marginTop={5}>
+    <VStack>
       {sortedStrokes.map(([uid, strokes], i) => {
         // console.log(uid);
         // console.log(strokes)
@@ -113,7 +113,7 @@ interface UserScoresProps {
 const UserScores = React.memo(({ userScores, uid, oppUid }: UserScoresProps) => {
   const [oppUser, oppUserIsLoading] = useUser(oppUid);
   return (
-    <VStack marginTop={5}>
+    <VStack>
       <Row
         text={'You vs ' + oppUser?.name}
         arr={userScores}
@@ -124,29 +124,33 @@ const UserScores = React.memo(({ userScores, uid, oppUid }: UserScoresProps) => 
 });
 
 interface GolfArrayProps {
-  course: GolfCourse | undefined;
+  course?: GolfCourse;
   children?: React.ReactNode;
 };
 
-const GolfArray = React.memo(({ course, children }: GolfArrayProps) => {
-  if (!course) return null;
+// I've tried so many ways to fix the garbage performance of this
+const GolfArray = ({ course, children }: GolfArrayProps) => {
   return (
     <ScrollView horizontal>
       <VStack>
-        <Box marginBottom={"5"}>
+        <Box marginBottom={3}>
           <Row text="Hole" arr={Array.from({ length: 18 }, (_, i) => i + 1)} arrType='Hole' />
         </Box>
-        <Box>
-          <Row text="Par" arr={course.parArr} arrType='Par' />
-        </Box>
-        <Box>
-          <Row text="Handicap" arr={course.handicapIndexArr} arrType='Handicap' />
-        </Box>
+        {course
+          ? <Box marginBottom={3}>
+            <Box>
+              <Row text="Par" arr={course.parArr} arrType='Par' />
+            </Box>
+            <Box>
+              <Row text="Handicap" arr={course.handicapIndexArr} arrType='Handicap' />
+            </Box>
+          </Box>
+          : null}
         {children}
       </VStack>
     </ScrollView>
   );
-});
+};
 //   , function areEqual(prevProps, nextProps) {
 //   return prevProps.course.id === nextProps.course.id && _.isEqual(prevProps.children, nextProps.children);
 // });

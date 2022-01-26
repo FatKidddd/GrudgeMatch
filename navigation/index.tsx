@@ -2,7 +2,7 @@ import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import * as React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ColorSchemeName, Pressable } from 'react-native';
 import AuthScreen from '../screens/AuthScreen';
 import LoadingScreen from '../screens/LoadingScreen';
@@ -10,11 +10,13 @@ import SettingsScreen from '../screens/SettingsScreen';
 import GamesScreen from '../screens/GamesScreen';
 import GameScreen from '../screens/GameScreen';
 import { DrawerActions } from '@react-navigation/routers';
-import { signOut, getAuth } from 'firebase/auth';
+import { signOut, getAuth, onAuthStateChanged } from 'firebase/auth';
 
 import { RootStackParamList, HomeStackParamList, HomeStackScreenProps, RootDrawerParamList, RootStackScreenProps, RootDrawerScreenProps } from '../types';
 import LinkingConfiguration from './LinkingConfiguration';
 import { Text } from 'native-base';
+import { useAppDispatch, useAppSelector } from '../hooks/selectorAndDispatch';
+import { setIsSignedIn } from '../redux/features/info';
 
 const Navigation = ({ colorScheme }: { colorScheme?: ColorSchemeName }) => {
   return (
@@ -29,14 +31,27 @@ const Navigation = ({ colorScheme }: { colorScheme?: ColorSchemeName }) => {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
+  const isSignedIn = useAppSelector(state => state.info.isSignedIn);
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async user => {
+      dispatch(setIsSignedIn(!!user));
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <Stack.Navigator
-      initialRouteName="Loading"
+      // initialRouteName="Loading"
       screenOptions={{ headerShown: false }}
     >
-      <Stack.Screen name="Root" component={DrawerNavigator} />
-      <Stack.Screen name="Loading" component={LoadingScreen} />
-      <Stack.Screen name="Auth" component={AuthScreen} />
+      {isSignedIn === null
+        ? <Stack.Screen name="Loading" component={LoadingScreen} />
+        : isSignedIn
+          ? <Stack.Screen name="Root" component={DrawerNavigator} />
+          : <Stack.Screen name="Auth" component={AuthScreen} options={{ animationTypeForReplace: !isSignedIn ? "pop" : "push" }}/>}
     </Stack.Navigator>
   );
 };

@@ -3,13 +3,14 @@ import { getDoc, updateDoc, getDocs, getFirestore, collection, doc, addDoc, Docu
 import { User, GolfCourse, GolfGame, HandicapInfo } from '../../../types';
 import { Box, FlatList, Heading, Avatar, HStack, VStack, Text, Spacer, Center, Button, Input, Pressable, ScrollView, Spinner } from "native-base";
 import { TouchableOpacity } from 'react-native';
-import { AntDesign, Ionicons } from '@expo/vector-icons';
+import { AntDesign, Fontisto, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GolfArray, LoadingView } from '../../../components';
+import { GolfArray, LoadingView, UserAvatar } from '../../../components';
 import { useGolfCourse, useUser } from '../../../hooks/useFireGet';
 import { useAppDispatch, useAppSelector } from '../../../hooks/selectorAndDispatch';
 import { tryAsync } from '../../../utils/asyncUtils';
-import { setGolfCourse } from '../../../redux/features/golfCourses';
+import { addGolfCourses, setGolfCourse } from '../../../redux/features/golfCourses';
+import { useIsMounted } from '../../../hooks/common';
     let json = require('./data.json');
 
 interface CourseViewProps {
@@ -54,9 +55,15 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
   const [lastVisible, setLastVisible] = useState<DocumentSnapshot<DocumentData> | null | undefined>();
   const [loading, setLoading] = useState(false);
   const [noMore, setNoMore] = useState(false);
+  const isMounted = useIsMounted();
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    getGolfCourses();
+    // addCoursesFromJson();
+  }, []);
 
   const db = getFirestore();
-  const dispatch = useAppDispatch();
 
   const addCourse = () => {
     const colRef = collection(db, 'golfCourses');
@@ -67,14 +74,6 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
     //   handicapIndexArr: [12, 4, 2, 16, 8, 10, 18, 14, 6, 5, 15, 1, 11, 7, 17, 9, 13, 3],
     // });
   };
-
-  const isMounted = useRef(true);
-
-  useEffect(() => {
-    getGolfCourses();
-    // addCoursesFromJson();
-    () => isMounted.current = false;
-  }, []);
 
   const addCoursesFromJson = () => {
     // console.log(json);
@@ -93,29 +92,31 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
   };
 
   const getGolfCourses = async () => {
-    if (loading || userId !== room.gameOwnerUserId) return;
-
+    if (loading || userId !== room.gameOwnerUserId || !isMounted.current) return;
     setLoading(true);
 
     const golfCoursesRef = collection(db, 'golfCourses');
     const q = lastVisible == undefined
-      ? query(golfCoursesRef, orderBy("name"), limit(3))
-      : query(golfCoursesRef, orderBy("name"), startAfter(lastVisible), limit(3));
+      ? query(golfCoursesRef, orderBy("name"), limit(5))
+      : query(golfCoursesRef, orderBy("name"), startAfter(lastVisible), limit(5));
 
     const [documentSnapshots, err] = await tryAsync(getDocs(q));
-    if (!documentSnapshots) return;
+    if (!documentSnapshots || !isMounted.current) return;
 
     // if no more past games
     if (!documentSnapshots.docs.length) setNoMore(true);
     else {
       // update golfCourse cache
-      if (!isMounted) return;
       console.log("Got golf courses");
       const newGolfCourses = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as GolfCourse));
+
       // may need to make this async?
-      newGolfCourses.forEach(newGolfCourse => {
-        dispatch(setGolfCourse(newGolfCourse));
-      });
+      if (!isMounted.current) return;
+      dispatch(addGolfCourses(newGolfCourses));
+
+      // newGolfCourses.forEach(newGolfCourse => {
+      //   dispatch(setGolfCourse(newGolfCourse));
+      // });
 
       // update lastVisible
       const newLastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
@@ -125,7 +126,7 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
       const newGolfCourseIds = newGolfCourses.map(newGolfCourse => newGolfCourse.id); 
       setGolfCourseIds([...golfCourseIds, ...newGolfCourseIds]);
     }
-    if (!isMounted) return;
+    if (!isMounted.current) return;
     setLoading(false);
   };
 
@@ -150,7 +151,7 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
           <Center width='100%' padding={1} rounded={20} bgColor={'white'} marginY={3}>
             <Text fontSize={18} fontWeight="500">Select course</Text>
           </Center>
-          <Box flex={1}>
+          <Box flex={1} marginBottom={3}>
             <FlatList
               data={golfCourseIds}
               renderItem={({ item: golfCourseId }: { item: string }) => (
@@ -164,7 +165,7 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
               onEndReached={onEndReached}
               onEndReachedThreshold={0.5}
               initialNumToRender={5}
-              ListFooterComponent={loading ? <Spinner size="sm" /> : null}
+              ListFooterComponent={loading ? <Spinner size="lg" /> : null}
             />
           </Box>
           <Box>
@@ -180,32 +181,54 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
 };
 
 interface HandicapRowProps {
-  user: User;
-  otherUser: User;
-  flipped: boolean;
-  pairId: string;
-  handicapInfo: HandicapInfo;
+  userId: string | undefined;
+  oppUid: string;
+  room: GolfGame;
   roomName: string;
 };
 
-const HandicapRow = React.memo(({ user, otherUser, flipped, pairId, handicapInfo, roomName }: HandicapRowProps) => {
-  const giveOrTake = (Number(handicapInfo.give) ^ Number(flipped)) ? 'Give' : 'Take';
+const HandicapRow = ({ userId, oppUid, room, roomName }: HandicapRowProps) => {
+  const [user, userIsLoading] = useUser(userId);
+  const [otherUser, otherUserIsLoading] = useUser(oppUid);
+  const [frontVal, setFrontVal] = useState<number>();
+  const [backVal, setBackVal] = useState<number>();
 
-  const [frontVal, setFrontVal] = useState(Number(handicapInfo.frontCount));
-  const [backVal, setBackVal] = useState(Number(handicapInfo.backCount));
+  const flipped = userId ? userId > oppUid : false;
+  const pairId = flipped ? oppUid + '+' + userId : userId + '+' + oppUid;
+  const handicapInfo = room.pointsArr[pairId]
+    ? room.pointsArr[pairId]
+    : {
+      give: !flipped,
+      frontCount: 0,
+      backCount: 0,
+      locked: false
+    };
+
+  console.log(handicapInfo)
+
+  useEffect(() => {
+    setFrontVal(Number(handicapInfo.frontCount));
+    setBackVal(Number(handicapInfo.backCount));
+  }, [handicapInfo]);
+
+  if (!user || !otherUser) return null;
+
+  const giveOrTake = (Number(handicapInfo.give) ^ Number(flipped)) ? 'Give' : 'Take';
 
   const db = getFirestore();
   const roomRef = doc(db, 'rooms', roomName);
 
   const handleInputChange = (frontOrBackCount: "frontCount" | "backCount", val: string) => {
     const num = Number(val);
-    if (isNaN(num)) return;
     if (frontOrBackCount === "frontCount") setFrontVal(num);
     else setBackVal(num);
   };
 
   const handleInputSubmit = async (frontOrBackCount: "frontCount" | "backCount") => {
-    const checkNumberInRange = (num: number) => 0 <= num && num <= 9;
+    const checkNumberInRange = (num: number | undefined | null) => {
+      if (num === undefined || num === null) return false;
+      return 0 <= num && num <= 9;
+    }
     if (!checkNumberInRange(frontVal) || !checkNumberInRange(backVal)) return;
     //console.log(frontVal, backVal)
     await updateDoc(roomRef, {
@@ -225,56 +248,65 @@ const HandicapRow = React.memo(({ user, otherUser, flipped, pairId, handicapInfo
     });
   };
 
-  return (
-    <Center bg="green.100" padding={15} rounded="20" marginTop={5}>
-      <HStack flex={1} bg="white" paddingY={3}>
-        <Center flex={1}>
-          <Text numberOfLines={1}>{flipped ? otherUser.name : user.name}</Text>
-          {/* add image */}
-        </Center>
-        <Box marginX={4}>
-          <Text>vs</Text>
+  const renderInput = (frontOrBackCount: "frontCount" | "backCount") => {
+    const val = frontOrBackCount === "frontCount" ? frontVal : backVal;
+    return (
+      <Center>
+        <Text fontWeight={'semibold'}>{frontOrBackCount === "frontCount" ? 'Front' : 'Back'}</Text>
+        <Box height={50} width={50}>
+        <Input
+          value={val ? val.toString() : undefined}
+          onChangeText={text => handleInputChange(frontOrBackCount, text)}
+          onEndEditing={() => handleInputSubmit(frontOrBackCount)}
+          editable={!handicapInfo.locked}
+          flex={1}
+          fontSize={20}
+          rounded={10}
+          textAlign={'center'}
+        />
         </Box>
-        <Center flex={1}>
-          <Text numberOfLines={1}>{!flipped ? otherUser.name : user.name}</Text>
-        </Center>
-      </HStack>
+      </Center>
+    );
+  };
 
-      <HStack alignItems='center' flex={1}>
-        <Box flex={1}>
-          <Button onPress={handleGiveOrTake} disabled={handicapInfo.locked} variant="subtle">{giveOrTake}</Button>
-        </Box>
-        <HStack flex={2} justifyContent={'space-evenly'}>
-          <Input
-            value={frontVal ? frontVal.toString() : undefined}
-            onChangeText={text => handleInputChange("frontCount", text)}
-            onEndEditing={() => handleInputSubmit("frontCount")}
-            editable={!handicapInfo.locked}
-            size={16}
-            fontSize={20}
-            rounded={10}
-            textAlign={'center'}
-          />
-          <Input
-            value={backVal ? backVal.toString() : undefined}
-            onChangeText={text => handleInputChange("backCount", text)}
-            onEndEditing={() => handleInputSubmit("backCount")}
-            editable={!handicapInfo.locked}
-            size={16}
-            fontSize={20}
-            rounded={10}
-            textAlign={'center'}
-          />
-        </HStack>
-        <Box>
+  return (
+    <Center bg='white' borderWidth={1} borderColor={'gray.100'} shadow={1} padding={15} rounded="20" marginTop={3}>
+      <HStack justifyContent={'space-between'} width='100%' space={5} alignItems={'center'}>
+        <Button disabled={true} variant="subtle" colorScheme={giveOrTake !== 'Give' ? 'green' : 'rose'}>{giveOrTake}</Button>
+        <HStack space={3} alignItems={'center'}>
+          {handicapInfo.locked
+            ? null
+            : <TouchableOpacity onPress={handleGiveOrTake} disabled={handicapInfo.locked}>
+              <Fontisto name='spinner-rotate-forward' size={25} />
+            </TouchableOpacity>}
           <TouchableOpacity onPress={handleLock}>
             <Ionicons name={handicapInfo.locked ? "md-lock-closed" : "md-lock-open-outline"} size={30} />
           </TouchableOpacity>
-        </Box>
+        </HStack>
+      </HStack>
+      <HStack paddingY={2} alignItems={'center'}>
+        <HStack>
+          <Center width={60}>
+            <Text numberOfLines={1}>{user.name}</Text>
+            {/* add image */}
+            <UserAvatar userId={user.id} />
+          </Center>
+          <Center marginX={2}>
+            <Text>vs</Text>
+          </Center>
+          <Center width={60}>
+            <Text numberOfLines={1}>{otherUser.name}</Text>
+            <UserAvatar userId={otherUser.id} />
+          </Center>
+        </HStack>
+        <HStack justifyContent={'space-evenly'} flex={1} marginLeft={3}>
+          {renderInput("frontCount")}
+          {renderInput("backCount")}
+        </HStack>
       </HStack>
     </Center>
   );
-});
+};
 
 const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => {
   const [course, courseIsLoading] = useGolfCourse(room.golfCourseId);
@@ -305,23 +337,7 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
   }
 
   const renderItem = ({ item }: { item: string }) => {
-    if (!userId) return null;
-    const id = item;
-    const flipped = userId > id;
-    const pairId = flipped ? id + '+' + userId : userId + '+' + id;
-    const handicapInfo = room.pointsArr[pairId]
-      ? room.pointsArr[pairId]
-      : {
-        give: !flipped,
-        frontCount: 0,
-        backCount: 0,
-        locked: false
-      };
-    const [user, userIsLoading] = useUser(userId);
-    const [otherUser, otherUserIsLoading] = useUser(id);
-    if (!user || !otherUser) return null;
-    const handicapRowProps: HandicapRowProps = { user, otherUser, roomName, handicapInfo, flipped, pairId };
-    return <HandicapRow {...handicapRowProps} />;
+    return <HandicapRow userId={userId} oppUid={item} room={room} roomName={roomName} />;
   };
 
   const len = room.userIds.length;
@@ -332,14 +348,14 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
   const isReady = len * (len - 1) / 2 === cnt;
 
   return (
-    <VStack bg="white" flex={1} marginY={5} padding={15} rounded={20}>
-      <Center marginBottom={3}>
-        <Text fontSize={18} fontWeight="500">Handicap</Text>
+    <VStack flex={1} marginY={3} >
+      <Center bg="white" padding={15} rounded={20} width="100%" flex={1} maxHeight={200}>
+        <Text fontSize={18} fontWeight="500" marginBottom={3}>Handicap</Text>
+        <LoadingView isLoading={courseIsLoading}>
+          <GolfArray course={course} />
+        </LoadingView>
       </Center>
-      <Box>
-        <GolfArray course={course}/>
-      </Box>
-      <Box marginY={5} flex={1}>
+      <Box flex={1}>
         <FlatList
           data={room.userIds.filter(uid => uid != userId)}
           renderItem={renderItem}

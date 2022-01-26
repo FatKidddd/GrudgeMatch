@@ -3,26 +3,28 @@ import { getFirestore, doc, getDoc, DocumentReference, DocumentData } from 'fire
 import { useEffect, useState } from 'react';
 import { ActionCreatorWithPayload } from '@reduxjs/toolkit';
 import { setGolfCourse } from '../redux/features/golfCourses';
-import { GolfCourse } from '../types';
 import { addRoom } from '../redux/features/gamesHistory';
 import { setUser } from '../redux/features/users';
 import { formatData } from '../utils/dateUtils';
+import { addIsGettingIds, deleteIsGettingIds } from '../redux/features/info';
+import { useEffectIf } from './common';
 
-type UseCacheProps<T> = {
+type UseFireGetProps<T> = {
   docRef: DocumentReference<DocumentData> | void;
   items: { [itemId: string]: T };
   itemId: string | void;
   toDispatch: ActionCreatorWithPayload<T, string>;
   textLog: string;
+  dontCall?: boolean;
 };
 
-const useFireGet = <T,>({ docRef, items, itemId, toDispatch, textLog }: UseCacheProps<T>): [T | undefined, boolean] => {
+const useFireGet = <T,>({ docRef, items, itemId, toDispatch, textLog, dontCall }: UseFireGetProps<T>): [T | undefined, boolean] => {
+  // const isGettingIds = useAppSelector(state => state.info.isGettingIds);
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    if (itemId && !items[itemId] && !isLoading && !!docRef) {
-      // memoization
+    if (itemId && !items[itemId] && !isLoading && !!docRef && !dontCall) {
       setIsLoading(true);
       getDoc(docRef)
         .then(res => {
@@ -40,7 +42,7 @@ const useFireGet = <T,>({ docRef, items, itemId, toDispatch, textLog }: UseCache
           console.error(err);
         });
     }
-  }, [itemId, items, isLoading]);
+  }, [textLog, itemId, isLoading, docRef]);
 
   return [itemId && !!docRef ? items[itemId] : undefined, isLoading];
 };
@@ -53,7 +55,7 @@ export const useGolfCourse = (golfCourseId: string | void) => {
     items: golfCourses,
     itemId: golfCourseId,
     toDispatch: setGolfCourse,
-    textLog: 'golfCourse'
+    textLog: 'golfCourse',
   })
 };
 
@@ -65,11 +67,11 @@ export const useRoom = (roomName: string | void) => {
     items: rooms,
     itemId: roomName,
     toDispatch: addRoom,
-    textLog: 'room'
+    textLog: 'room',
   });
 };
 
-export const useUser = (uid: string | void) => {
+export const useUser = (uid: string | void, dontCall?: boolean) => {
   const db = getFirestore();
   const users = useAppSelector(state => state.users);
   return useFireGet({
@@ -77,8 +79,13 @@ export const useUser = (uid: string | void) => {
     items: users,
     itemId: uid,
     toDispatch: setUser,
-    textLog: 'user'
+    textLog: 'user',
+    dontCall
   });
 };
+
+// export const useUserIds = (userIds: string[] | void) => {
+  
+// };
 
 export default useFireGet;

@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 import { Box, Text, Heading, VStack, FormControl, Input, Link, Button, HStack, Center, useToast, Image, Spinner } from "native-base";
 import { Ionicons } from '@expo/vector-icons';
 import { GoogleAuthProvider, onAuthStateChanged, signInWithCredential, getAuth, createUserWithEmailAndPassword, updateProfile, User, signInWithEmailAndPassword } from 'firebase/auth';
 import * as Google from 'expo-google-app-auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { TouchableOpacity } from 'react-native';
-import { SvgUri } from 'react-native-svg';
 import { GoogleSvg } from '../components';
 
 const IOS_CLIENT_ID = "446448293024-9u0b4sak30e4deqj5eaaan3og5ancs9j.apps.googleusercontent.com";
@@ -159,9 +157,6 @@ const AuthScreen = () => {
   const handleEmailLogin = () => {
     setIsLoading(true);
     signInWithEmailAndPassword(auth, email, password)
-      .then(res => {
-        setIsLoading(false);
-      })
       .catch(err => {
         setIsLoading(false);
         console.error(err)
@@ -220,9 +215,8 @@ const AuthScreen = () => {
               onChangeText={newPassword => setPassword(newPassword)}
               InputRightElement={
                 <Button onPress={() => setHide(!hide)}>
-                  <Ionicons size={20} name={hide ? "eye-outline" : "eye-off-outline"} />
-                </Button>
-              }
+                  <Ionicons size={20} name={hide ? "eye-outline" : "eye-off-outline"} color='#eeeeee'/>
+                </Button>}
             />
             {/* <Link
             _text={{
@@ -240,7 +234,7 @@ const AuthScreen = () => {
             )}
             {isLoading
               ? <Spinner size="lg" />
-              : <Button mt="2" colorScheme="indigo" onPress={handleSubmit}>
+              : <Button mt="2" onPress={handleSubmit}>
                 {isRegister ? 'Sign up' : 'Sign in'}
               </Button>}
             <HStack justifyContent={'space-between'} alignItems={'center'} marginTop={3}>

@@ -8,7 +8,6 @@ import uuid from "react-native-uuid";
 import { Camera } from 'expo-camera';
 import { getAuth, signOut } from 'firebase/auth';
 import { updateDoc, getFirestore, doc, deleteField } from 'firebase/firestore';
-import FastImage from 'react-native-fast-image';
 // import BoringAvatar from 'react-native-boring-avatars';
 import { getInitials } from '../utils/userUtils';
 import { useUser } from '../hooks/useFireGet';
@@ -147,7 +146,6 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
     }
   };
 
-
   const avatarProps = {
     key: user.id,
     size: "2xl"
@@ -164,11 +162,12 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
           <Avatar {...avatarProps}>
             {getInitials(user.name)}
           </Avatar>
-          <HStack marginY={15} bg='green.100' width={220} space={3}>
+          <HStack marginY={15} width={220} space={3}>
             <Button
               onPress={_pickImage}
               leftIcon={<Icon as={MaterialCommunityIcons} name="pencil" size="sm" />}
               flex={1}
+              colorScheme='blue'
             >
               Edit
             </Button>

@@ -2,7 +2,7 @@ import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { store } from './redux/store';
 import { Provider } from 'react-redux';
-import { NativeBaseProvider, extendTheme } from "native-base";
+import { NativeBaseProvider, extendTheme, Button } from "native-base";
 import useCachedResources from './hooks/useCachedResources';
 import Navigation from './navigation';
 // Import the functions you need from the SDKs you need
@@ -36,12 +36,32 @@ const app = initializeApp(firebaseConfig);
 const auth = initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
 LogBox.ignoreLogs(['AsyncStorage has been extracted from react-native core and will be removed in a future release']); 
 
-const config = {
-  useSystemColorMode: false,
-  initialColorMode: "dark",
-};
+export const theme = extendTheme({
+  components: {
+    Button: {
+      // baseStyle: ({ colorScheme }) => ({
+      //   // color: 'red.200'
+      //   // rounded: 'md',
+      //   bg: `${colorScheme}.200`
+      // }),
+      // baseStyle: {
+      //   font
+      // },
+      defaultProps: {
+        colorScheme: 'darkBlue',
+        // variant: 'subtle'
+        _text: {
+          color: '#eeeeee'
+        }
+      },
+    },
+  },
+  config: {
+    useSystemColorMode: false,
+    //initialColorMode: "dark",
+  }
+});
 
-export const theme = extendTheme({ config });
 
 export default function App() {
   const isLoadingComplete = useCachedResources();
@@ -49,15 +69,13 @@ export default function App() {
   // console.log(Application.applicationId)
   // console.log(Application.applicationName)
   // console.log(Constants.manifest)
-  if (!isLoadingComplete)
-    return null;
+  if (!isLoadingComplete) return null;
   return (
     <Provider store={store}>
       <SSRProvider>
-        <NativeBaseProvider>
+        <NativeBaseProvider theme={theme}>
           <SafeAreaProvider>
             <Navigation />
-            <StatusBar />
           </SafeAreaProvider>
         </NativeBaseProvider>
       </SSRProvider>

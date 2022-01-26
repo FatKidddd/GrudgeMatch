@@ -13,6 +13,7 @@ import { getBetScores, getColor, getColorType, getUserHoleNumber } from '../../.
 import { tryAsync } from '../../../utils/asyncUtils';
 import { useGolfCourse, useUser } from '../../../hooks/useFireGet';
 import { formatData } from '../../../utils/dateUtils';
+import { useIsMounted } from '../../../hooks/common';
 
 // leave room function
 
@@ -29,20 +30,15 @@ const BetRow = ({ userId, oppUid, course, room }: BetRowProps) => {
   const [oppUser, oppUserIsLoading] = useUser(oppUid);
 
   const { finalScore, finalScores } = getBetScores({ userId, oppUid, course, room });
-
-  const golfArray = useMemo(() =>
-    <GolfArray course={course}>
-      <UserScores userScores={finalScores} uid={userId} oppUid={oppUid} />
-    </GolfArray>
-    , []);
+  console.log(course)
 
   return (
-    <VStack width='100%' borderWidth={2} borderColor={'gray.100'} rounded={20} padding={3} marginTop={2}>
-      <Center width='100%' alignItems='flex-end'>
+    <VStack width='100%' borderWidth={2} borderColor={'gray.100'} rounded={20} padding={3} marginTop={3}>
+      {/* <Center width='100%' alignItems='flex-end'>
         <TouchableOpacity onPress={() => setShowDetail(!showDetail)}>
           <MaterialIcons name={`expand-${!showDetail ? 'more' : 'less'}`} size={30} />
         </TouchableOpacity>
-      </Center>
+      </Center> */}
       <HStack marginBottom={5} justifyContent={'space-evenly'}>
         <HStack alignItems={'center'}>
           <Center width={70}>
@@ -62,7 +58,7 @@ const BetRow = ({ userId, oppUid, course, room }: BetRowProps) => {
           </Center>
         </Center>
       </HStack>
-      <PresenceTransition
+      {/* <PresenceTransition
         visible={showDetail}
         initial={{
           opacity: 0,
@@ -75,9 +71,11 @@ const BetRow = ({ userId, oppUid, course, room }: BetRowProps) => {
             duration: 250,
           },
         }}
-      >
-        {golfArray}
-      </PresenceTransition>
+      > */}
+      <GolfArray>
+        <UserScores userScores={finalScores} uid={userId} oppUid={oppUid} />
+      </GolfArray>
+      {/* </PresenceTransition> */}
     </VStack>
   );
 };
@@ -115,16 +113,6 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
 
   const sortedUserIds = Object.keys(room.usersStrokes).filter((val) => val != userId).sort();
 
-  const renderItem = useCallback((uid) =>
-    <BetRow
-      key={uid}
-      userId={userId}
-      oppUid={uid}
-      course={course}
-      room={room}
-    />
-  , []);
-
   return (
     <Box paddingX={5}>
       <HStack alignItems='center'>
@@ -144,7 +132,14 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
             : <Box width={30}></Box>
           : null}
       </HStack>
-      {sortedUserIds.map(renderItem)} 
+      {sortedUserIds.map((uid) =>
+        <BetRow
+          key={uid}
+          userId={userId}
+          oppUid={uid}
+          course={course}
+          room={room}
+        />)}
     </Box>
   );
 });
@@ -177,6 +172,8 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
   // need to handle connectivity issue, what happens if data received is nothing?
   const [loading, setLoading] = useState(true);
   const [golfCourse, courseIsLoading] = useGolfCourse(room.golfCourseId);
+  const toast = useToast();
+  const isMounted = useIsMounted();
 
   // to get room
   useEffect(() => {
@@ -185,17 +182,18 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
         id: res.id,
         ...res.data()
       } as GolfGame;
-      formatData(data);
-      console.log('room screen', data);
-      setRoom(data);
-      setLoading(false);
 
-      // handle game end
-      if (data.gameEnded && !isSavedView) save();
+      if (isMounted.current) {
+        formatData(data);
+        console.log('room screen', data);
+        setRoom(data);
+        setLoading(false);
+        // handle game end
+        if (data.gameEnded && !isSavedView) save();
+      }
     });
     return () => unsubscribe();
   }, []);
-
 
   // to handle game end
   useEffect(() => {
@@ -205,7 +203,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
     // handle all ended
     const userHoleNumbers = usersStrokesArr.map(arr => getUserHoleNumber(arr));
     const lowestHoleNumber = Math.min(...userHoleNumbers);
-    console.log("lowestholenumber", lowestHoleNumber)
+    console.log("lowestholenumber", lowestHoleNumber);
     if (lowestHoleNumber === 19) {
       (async () => {
         const [res, err] = await tryAsync(updateDoc(roomRef, {
@@ -224,7 +222,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
   const roomRef = doc(db, 'rooms', roomName);
 
   const handleLeave = async () => {
-    if (!userId) return null;
+    if (!userId) return;
     const userRef = doc(db, 'users', userId);
 
     // only delete user from room if game hasnt ended
@@ -240,7 +238,24 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
     });
   };
 
-  const toast = useToast();
+  const roomHeader = useMemo(() => {
+    if (isSavedView) {
+      return (
+        <HStack alignItems="center" justifyContent="space-between" shadow={1} marginX={3} marginY={2}>
+          <UsersBar userIds={room.userIds} />
+        </HStack>
+      );
+    }
+    return (
+      <Header>
+        <HStack alignItems="center" justifyContent="space-between">
+          <BackButton onPress={() => navigation.navigate("Games")} />
+          <UsersBar userIds={room.userIds} />
+          <RoomDetails roomName={roomName} room={room} handleLeave={handleLeave} />
+        </HStack>
+      </Header>
+    );
+  }, [room.userIds, isSavedView, handleLeave]);
 
   const save = () => {
     const handleSaveError = () => {
@@ -273,26 +288,6 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
       });
   };
 
-  const header = useMemo(() => {
-    if (isSavedView) {
-      return (
-        <HStack alignItems="center" justifyContent="space-between" marginBottom={3}>
-          <UsersBar userIds={room.userIds} />
-        </HStack>
-      );
-    }
-    return (
-      <Header>
-        <HStack alignItems="center" justifyContent="space-between">
-          <BackButton onPress={() => navigation.navigate("Games")} />
-          <UsersBar userIds={room.userIds}/>
-          <RoomDetails roomName={roomName} room={room} handleLeave={handleLeave} />
-        </HStack>
-      </Header>
-    );
-  }, [room.userIds, room.gameEnded, isSavedView]);
-
-  
   if (!userId) return null;
   const holeNumber = getUserHoleNumber(room.usersStrokes[userId]);
 
@@ -303,7 +298,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
 
   return (
     <>
-      {header}
+      {roomHeader}  
       <Box flex={1} width="100%" paddingX={15}>
         {loading
           ? <Center flex={1}>
@@ -313,8 +308,8 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
             {/* check that room has a golf course and that all handicap between pairs has been chosen */}
             {room.golfCourseId && room.prepDone
               ?
-              <ScrollView paddingTop={3}>
-                <Box bg={'white'} marginBottom={5} rounded={20} paddingY={5}>
+              <ScrollView flex={1}>
+                <Box bg={'white'} marginY={5} rounded={20} paddingY={5}>
                   <LoadingView isLoading={courseIsLoading}>
                     {showTransitionScoreboard
                       ? <TransitionScoreboard
@@ -328,7 +323,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
                     }
                   </LoadingView>
                 </Box>
-                <Center padding={5} rounded={20} bg={'white'}>
+                <Center padding={5} rounded={20} bg={'white'} marginBottom={5}>
                   <Text fontSize={18} fontWeight={'semibold'} marginBottom={3}>All Strokes</Text>
                   <LoadingView isLoading={courseIsLoading}>
                     <GolfArray course={golfCourse}>

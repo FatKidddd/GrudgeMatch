@@ -17,12 +17,22 @@ export const getBetScores = ({ userId, oppUid, course, room }: GetBetScores) => 
 
   const trueGive = Number(ids[0] === oppUid) ^ Number(handicapInfo.give); // userId gives or takes, give == 1, take == 0
 
-  const frontHoles = handicapIndexArr.slice(0, handicapIndexArr.length / 2);
-  const backHoles = handicapIndexArr.slice(handicapIndexArr.length / 2);
+  const holes = Array.from({ length: 18 }, (_, i) => i + 1);
 
-  const compareFn = (a: number, b: number) => a > b ? -1 : a < b ? 1 : 0;
-  const neededFrontHoles = frontHoles.sort(compareFn).slice(handicapInfo.frontCount);
-  const neededBackHoles = backHoles.sort(compareFn).slice(handicapInfo.backCount);
+  const frontHoles = holes.slice(0, holes.length / 2);//handicapIndexArr.slice(0, handicapIndexArr.length / 2);
+  const backHoles = holes.slice(holes.length / 2);//handicapIndexArr.slice(handicapIndexArr.length / 2);
+
+  const compareFn = (holeA: number, holeB: number) => {
+    const handicapA = handicapIndexArr[holeA - 1];
+    const handicapB = handicapIndexArr[holeB - 1];
+    return handicapA > handicapB ? -1 : handicapA < handicapB ? 1 : 0;
+  };
+  // console.log(frontHoles.sort(compareFn), backHoles.sort(compareFn));
+
+  const neededFrontHoles = frontHoles.sort(compareFn).slice(0, handicapInfo.frontCount);
+  const neededBackHoles = backHoles.sort(compareFn).slice(0, handicapInfo.backCount);
+
+  // console.log(neededFrontHoles, neededBackHoles);
   
   const set = new Set();
   for (const val of neededFrontHoles) set.add(val);
@@ -31,14 +41,18 @@ export const getBetScores = ({ userId, oppUid, course, room }: GetBetScores) => 
   const pairScores = [userScores.slice(), oppScores.slice()];
   for (let i = 0; i < pairScores[trueGive].length; i++) {
     const val = pairScores[trueGive][i];
-    if (val != null && set.has(handicapIndexArr[i]))
+    if (val != null && set.has(i + 1)) // if stroke has been made and the hole is handicapped
       pairScores[trueGive][i] = val - 1;
   }
+
+  // console.log(pairScores)
 
   const finalScores = _.zip(...pairScores).map(pair => {
     if (pair[0] == undefined || pair[1] == undefined) return null;
     return pair[0] < pair[1] ? 1 : pair[0] > pair[1] ? -1 : 0
   });
+
+  // console.log(finalScores);
 
   const sum = (arr: number[] | Stroke[]) => arr.map(e => Number(e)).reduce((prevVal, curVal) => prevVal + curVal);
   const finalScore = sum(finalScores);
