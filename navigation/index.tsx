@@ -17,6 +17,7 @@ import LinkingConfiguration from './LinkingConfiguration';
 import { Text } from 'native-base';
 import { useAppDispatch, useAppSelector } from '../hooks/selectorAndDispatch';
 import { setIsSignedIn } from '../redux/features/info';
+import { createLocalFileCache, setDefaultImageCache } from '../components';
 
 const Navigation = ({ colorScheme }: { colorScheme?: ColorSchemeName }) => {
   return (
@@ -29,6 +30,9 @@ const Navigation = ({ colorScheme }: { colorScheme?: ColorSchemeName }) => {
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const cache = createLocalFileCache();
+setDefaultImageCache(cache);
 
 const RootNavigator = () => {
   const isSignedIn = useAppSelector(state => state.info.isSignedIn);
@@ -78,7 +82,6 @@ const HomeNavigator = () => {
               <Ionicons
                 name="md-menu"
                 size={25}
-                style={{ marginRight: 15 }}
               />
             </Pressable>
           ),
@@ -99,7 +102,6 @@ const HomeNavigator = () => {
               <FontAwesome
                 name="chevron-left"
                 size={20}
-                style={{ marginRight: 15 }}
               />
             </Pressable>
           )
@@ -112,6 +114,7 @@ const HomeNavigator = () => {
 const handleLogOut = () => {
   const auth = getAuth();
   signOut(auth);
+  cache.clearAsync(); // clear images
   console.log("Logged out");
 };
 
@@ -137,11 +140,24 @@ function DrawerNavigator() {
               onPress={handleLogOut}
               style={({ pressed }) => ({
                 opacity: pressed ? 0.5 : 1,
-                marginRight: 12
+                marginRight: 15
               })}>
               <Text color='red.500'>Log out</Text>
             </Pressable>
-           )
+          ),
+          headerLeft: () => (
+            <Pressable
+              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.5 : 1,
+                marginLeft: 15
+              })}>
+              <Ionicons
+                name="md-menu"
+                size={25}
+              />
+            </Pressable>
+          ),
         })}
       />
     </Drawer.Navigator>

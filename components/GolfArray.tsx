@@ -44,10 +44,10 @@ const Row = ({ text, arr, arrType, comparisonArr }: ArrProps) => {
     return <Tile num={summation} color={getColor(colorType)} />;
   };
 
-  const front = arr.slice(0, arr.length / 2);
-  const back = arr.slice(arr.length / 2);
-  const compareFront = comparisonArr ? comparisonArr.slice(0, comparisonArr.length / 2) : undefined;
-  const compareBack = comparisonArr ? comparisonArr.slice(comparisonArr.length / 2) : undefined;
+  const front = arr.slice(0, 9);
+  const back = arr.slice(9);
+  const compareFront = comparisonArr ? comparisonArr.slice(0, 9) : undefined;
+  const compareBack = comparisonArr ? comparisonArr.slice(9) : undefined;
 
   const sumIfInList = ['Stroke', 'Bet', 'Par'];
   const shouldSum = !!sumIfInList.find(e => e === arrType);
@@ -124,19 +124,22 @@ const UserScores = React.memo(({ userScores, uid, oppUid }: UserScoresProps) => 
 });
 
 interface GolfArrayProps {
-  course?: GolfCourse;
+  course: GolfCourse | undefined;
   children?: React.ReactNode;
+  showCourseInfo?: boolean;
 };
 
 // I've tried so many ways to fix the garbage performance of this
-const GolfArray = ({ course, children }: GolfArrayProps) => {
+const GolfArray = ({ course, children, showCourseInfo }: GolfArrayProps) => {
+  if (!course) return null;
+  const numOfHoles = course.parArr.length;
   return (
     <ScrollView horizontal>
       <VStack>
         <Box marginBottom={3}>
-          <Row text="Hole" arr={Array.from({ length: 18 }, (_, i) => i + 1)} arrType='Hole' />
+          <Row text="Hole" arr={Array.from({ length: numOfHoles }, (_, i) => i + 1)} arrType='Hole' />
         </Box>
-        {course
+        {showCourseInfo
           ? <Box marginBottom={3}>
             <Box>
               <Row text="Par" arr={course.parArr} arrType='Par' />

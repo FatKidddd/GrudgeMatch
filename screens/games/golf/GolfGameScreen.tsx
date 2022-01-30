@@ -97,7 +97,7 @@ const RoomModalButtons = () => {
           // update room
           await updateDoc(roomRef, {
             userIds: arrayUnion(userId),
-            [`usersStrokes.${userId}`]: new Array(18).fill(null)
+            [`usersStrokes.${userId}`]: [] // new Array(18).fill(null) // send help
           });
 
           // update user

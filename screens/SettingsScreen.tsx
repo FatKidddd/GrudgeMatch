@@ -5,16 +5,16 @@ import * as ImagePicker from "expo-image-picker";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject,  } from "firebase/storage";
 import { LogBox, Platform } from "react-native";
 import uuid from "react-native-uuid";
-import { Camera } from 'expo-camera';
-import { getAuth, signOut } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { updateDoc, getFirestore, doc, deleteField } from 'firebase/firestore';
 // import BoringAvatar from 'react-native-boring-avatars';
 import { getInitials } from '../utils/userUtils';
 import { useUser } from '../hooks/useFireGet';
 import { useAppDispatch } from '../hooks/selectorAndDispatch';
-import { ConfirmModal } from '../components';
+import { ConfirmModal, UserAvatar } from '../components';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { deleteUser } from '../redux/features/users';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
   const [uploading, setUploading] = useState(false);
@@ -57,6 +57,7 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
 
   const db = getFirestore();
   const userRef = doc(db, 'users', uid);
+  const fileRef = ref(getStorage(), user.id); //uuid.v4() as string);
 
   const uploadImageAsync = async (uri: string) => {
     // Why are we using XMLHttpRequest? See:
@@ -75,7 +76,6 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
       xhr.send(null);
     }) as any;
 
-    const fileRef = ref(getStorage(), user.id); //uuid.v4() as string);
     const result = await uploadBytes(fileRef, blob);
 
     // We're done with the blob, close and release it
@@ -95,12 +95,11 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
   
   const _deleteImage = async () => {
     if (!user.imageUrl) return;
-    const imageRef = ref(getStorage(), user.id);
     Promise.all([
       updateDoc(userRef, {
         imageUrl: deleteField()
       }),
-      deleteObject(imageRef)
+      deleteObject(fileRef)
     ])
       .then(res => {
         console.log("Deleted profile picture of user", user.id);
@@ -116,6 +115,7 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
     let pickerResult = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
       aspect: [1, 1],
+      quality: 0
     });
 
     console.log({ pickerResult });
@@ -128,9 +128,14 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
       setUploading(true);
 
       if (!pickerResult.cancelled) {
-        const uploadUrl = await uploadImageAsync(pickerResult.uri);
+        const manipResult = await manipulateAsync(pickerResult.uri, [
+          {
+            resize: { height: 300, width: 300 },
+          },
+        ]);
+        const uploadUrl = await uploadImageAsync(manipResult.uri);
         updateDoc(userRef, {
-          imageUrl: uploadUrl
+          imageUrl: uploadUrl,
         })
           .then(res => {
             console.log("Added profile picture to user", uid);
@@ -146,22 +151,23 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
     }
   };
 
-  const avatarProps = {
-    key: user.id,
-    size: "2xl"
-  } as any;
-  if (!!user.imageUrl) {
-    avatarProps.source = {
-      uri: user.imageUrl
-    };
-  }
+  // const avatarProps = {
+  //   key: user.id,
+  //   size: "2xl"
+  // } as any;
+  // if (!!user.imageUrl) {
+  //   avatarProps.source = {
+  //     uri: user.imageUrl
+  //   };
+  // }
   return (
     <>
       <ScrollView marginTop={25}>
         <Center>
-          <Avatar {...avatarProps}>
+          {/* <Avatar {...avatarProps}>
             {getInitials(user.name)}
-          </Avatar>
+          </Avatar> */}
+          <UserAvatar userId={user.id}/>
           <HStack marginY={15} width={220} space={3}>
             <Button
               onPress={_pickImage}

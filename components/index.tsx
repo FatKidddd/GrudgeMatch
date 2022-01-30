@@ -7,6 +7,15 @@ import BackButton from "./BackButton";
 import Header from "./Header";
 import LoadingView from "./LoadingView";
 import GoogleSvg from "./GoogleSvg";
+import {
+  createLocalFileCache,
+  DownloadOptions,
+  ICacheEntryResult,
+  CacheEntry,
+  CachedImage,
+  CachedImageProps,
+  setDefaultImageCache,
+} from './CachedImage';
 
 export {
   RoomDetails,
@@ -21,5 +30,12 @@ export {
   BackButton,
   Header,
   LoadingView,
-  GoogleSvg
+  GoogleSvg,
+  createLocalFileCache,
+  DownloadOptions,
+  ICacheEntryResult,
+  CacheEntry,
+  CachedImage,
+  CachedImageProps,
+  setDefaultImageCache,
 };

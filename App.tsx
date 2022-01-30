@@ -18,6 +18,9 @@ import { initializeAuth } from 'firebase/auth';
 import { getReactNativePersistence } from 'firebase/auth/react-native';
 
 import { SSRProvider } from '@react-aria/ssr';
+import { createLocalFileCache, setDefaultImageCache } from './components';
+
+setDefaultImageCache(createLocalFileCache());
 
 const firebaseConfig = {
   apiKey: "AIzaSyArYG40JyZ01TC1fC464x-VJ9_j2_5Bjl4",

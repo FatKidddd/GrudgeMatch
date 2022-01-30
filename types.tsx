@@ -105,11 +105,15 @@ export interface Room {
 // cant think of a better variable name because the game and room are interlinked
 export type Stroke = number | null;
 
-export type GolfStrokes = [
-  Stroke, Stroke, Stroke, Stroke, Stroke, Stroke,
-  Stroke, Stroke, Stroke, Stroke, Stroke, Stroke,
-  Stroke, Stroke, Stroke, Stroke, Stroke, Stroke
-];
+export type GolfStrokes = Stroke[];
+// [
+//   Stroke, Stroke, Stroke, Stroke, Stroke, Stroke,
+//   Stroke, Stroke, Stroke, Stroke, Stroke, Stroke,
+//   Stroke, Stroke, Stroke, Stroke, Stroke, Stroke
+// ] | [
+//   Stroke, Stroke, Stroke, Stroke, Stroke, Stroke,
+//   Stroke, Stroke, Stroke
+// ];
 
 export interface HandicapInfo {
   give: boolean;

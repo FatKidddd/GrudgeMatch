@@ -15,8 +15,6 @@ import { useGolfCourse, useUser } from '../../../hooks/useFireGet';
 import { formatData } from '../../../utils/dateUtils';
 import { useIsMounted } from '../../../hooks/common';
 
-// leave room function
-
 interface BetRowProps {
   userId: string,
   oppUid: string,
@@ -30,7 +28,6 @@ const BetRow = ({ userId, oppUid, course, room }: BetRowProps) => {
   const [oppUser, oppUserIsLoading] = useUser(oppUid);
 
   const { finalScore, finalScores } = getBetScores({ userId, oppUid, course, room });
-  console.log(course)
 
   return (
     <VStack width='100%' borderWidth={2} borderColor={'gray.100'} rounded={20} padding={3} marginTop={3}>
@@ -72,7 +69,7 @@ const BetRow = ({ userId, oppUid, course, room }: BetRowProps) => {
           },
         }}
       > */}
-      <GolfArray>
+      <GolfArray course={course}>
         <UserScores userScores={finalScores} uid={userId} oppUid={oppUid} />
       </GolfArray>
       {/* </PresenceTransition> */}
@@ -85,11 +82,11 @@ interface TransitionScoreboardProps {
   room: GolfGame;
   roomName: string;
   setShowTransitionScoreboard: (bool: boolean) => void;
-  course: GolfCourse | undefined;
+  golfCourse: GolfCourse | undefined;
 };
 
-const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransitionScoreboard, course }: TransitionScoreboardProps) => {
-  if (!userId || !course) return null;
+const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransitionScoreboard, golfCourse }: TransitionScoreboardProps) => {
+  if (!userId || !golfCourse) return null;
 
   const db = getFirestore();
   const roomRef = doc(db, 'rooms', roomName);
@@ -112,6 +109,7 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
   };
 
   const sortedUserIds = Object.keys(room.usersStrokes).filter((val) => val != userId).sort();
+  const roomHoleLimit = golfCourse.parArr.length;
 
   return (
     <Box paddingX={5}>
@@ -125,7 +123,7 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
           <Text fontSize={18} fontWeight={'semibold'}>Betting Scores</Text>
         </Center>
         {!room.gameEnded
-          ? (1 <= holeNumber && holeNumber <= 18)
+          ? (1 <= holeNumber && holeNumber <= roomHoleLimit)
             ? <TouchableOpacity onPress={() => setShowTransitionScoreboard(false)}>
               <Ionicons name="arrow-forward" size={30} />
             </TouchableOpacity>
@@ -137,7 +135,7 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
           key={uid}
           userId={userId}
           oppUid={uid}
-          course={course}
+          course={golfCourse}
           room={room}
         />)}
     </Box>
@@ -154,24 +152,10 @@ interface GolfRoomScreenProps {
 // for now its just a more quick to implement solution
 const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenProps) => {
   const [showTransitionScoreboard, setShowTransitionScoreboard] = useState(false);
-  const [room, setRoom] = useState({
-    id: '',
-    userIds: [],
-    dateCreated: '',
-    gameId: "",
-    gameOwnerUserId: "",
-    bannedUserIds: [],
-    password: "",
-    gameEnded: false,
-
-    usersStrokes: {}, // 18 holes, the render will be diff;
-    usersStrokesParBirdieCount: {},
-    pointsArr: {},
-    prepDone: false,
-  } as GolfGame);
+  const [room, setRoom] = useState<GolfGame>();
   // need to handle connectivity issue, what happens if data received is nothing?
   const [loading, setLoading] = useState(true);
-  const [golfCourse, courseIsLoading] = useGolfCourse(room.golfCourseId);
+  const [golfCourse, courseIsLoading] = useGolfCourse(room?.golfCourseId);
   const toast = useToast();
   const isMounted = useIsMounted();
 
@@ -197,14 +181,14 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
 
   // to handle game end
   useEffect(() => {
-    if (room.gameEnded) return; // to only end game once
+    if (!room || room.gameEnded) return; // to only end game once
     const usersStrokesArr = Object.values(room.usersStrokes);
-    if (usersStrokesArr.length === 0) return;
+    if (!usersStrokesArr) return;
     // handle all ended
     const userHoleNumbers = usersStrokesArr.map(arr => getUserHoleNumber(arr));
     const lowestHoleNumber = Math.min(...userHoleNumbers);
     console.log("lowestholenumber", lowestHoleNumber);
-    if (lowestHoleNumber === 19) {
+    if (lowestHoleNumber === usersStrokesArr[0].length + 1) {
       (async () => {
         const [res, err] = await tryAsync(updateDoc(roomRef, {
           gameEnded: true,
@@ -214,7 +198,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
         if (res) console.log("Game ended");
       })();
     }
-  }, [room.usersStrokes]);
+  }, [room?.usersStrokes]);
 
   const db = getFirestore();
   const auth = getAuth();
@@ -226,7 +210,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
     const userRef = doc(db, 'users', userId);
 
     // only delete user from room if game hasnt ended
-    if (!room.gameEnded) {
+    if (!room?.gameEnded) {
       await updateDoc(roomRef, {
         userIds: arrayRemove(userId),
         [`usersStrokes.${userId}`]: deleteField()
@@ -239,6 +223,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
   };
 
   const roomHeader = useMemo(() => {
+    if (!room) return null;
     if (isSavedView) {
       return (
         <HStack alignItems="center" justifyContent="space-between" shadow={1} marginX={3} marginY={2}>
@@ -255,7 +240,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
         </HStack>
       </Header>
     );
-  }, [room.userIds, isSavedView, handleLeave]);
+  }, [room?.userIds, isSavedView, handleLeave]);
 
   const save = () => {
     const handleSaveError = () => {
@@ -288,58 +273,48 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
       });
   };
 
-  if (!userId) return null;
+  if (!userId || !room || loading) {
+    return (
+      <Center flex={1}>
+        <Spinner size="lg" />
+      </Center>
+    );
+  };
+
   const holeNumber = getUserHoleNumber(room.usersStrokes[userId]);
 
-  if (holeNumber > 18 && !showTransitionScoreboard)
-    setShowTransitionScoreboard(true);
-
-  const inputBoxProps = { room, roomName, golfCourse, userId, holeNumber, setShowTransitionScoreboard };
+  const childProps = { room, roomName, golfCourse, userId, holeNumber, setShowTransitionScoreboard };
 
   return (
     <>
-      {roomHeader}  
+      {roomHeader}
       <Box flex={1} width="100%" paddingX={15}>
-        {loading
-          ? <Center flex={1}>
-            <Spinner size="lg" />
-          </Center>
-          : <>
-            {/* check that room has a golf course and that all handicap between pairs has been chosen */}
-            {room.golfCourseId && room.prepDone
-              ?
-              <ScrollView flex={1}>
-                <Box bg={'white'} marginY={5} rounded={20} paddingY={5}>
-                  <LoadingView isLoading={courseIsLoading}>
-                    {showTransitionScoreboard
-                      ? <TransitionScoreboard
-                        userId={userId}
-                        room={room}
-                        roomName={roomName}
-                        setShowTransitionScoreboard={setShowTransitionScoreboard}
-                        course={golfCourse}
-                      />
-                      : <InputBox {...inputBoxProps} />
-                    }
-                  </LoadingView>
-                </Box>
-                <Center padding={5} rounded={20} bg={'white'} marginBottom={5}>
-                  <Text fontSize={18} fontWeight={'semibold'} marginBottom={3}>All Strokes</Text>
-                  <LoadingView isLoading={courseIsLoading}>
-                    <GolfArray course={golfCourse}>
-                      <UsersStrokes usersStrokes={room.usersStrokes} course={golfCourse} />
-                    </GolfArray>
-                  </LoadingView>
-                </Center>
-                {/* <AllStrokes roomName={roomName} usersStrokes={room.usersStrokes}/> */}
-              </ScrollView>
-              : <GolfPrepScreen
-                userId={userId}
-                roomName={roomName}
-                room={room}
-              />
-            }
-          </>}
+        {/* check that room has a golf course and that all handicap between pairs has been chosen */}
+        {room.golfCourseId && room.prepDone
+          ?
+          <ScrollView flex={1}>
+            <Box bg={'white'} marginY={5} rounded={20} paddingY={5}>
+              <LoadingView isLoading={courseIsLoading}>
+                {showTransitionScoreboard
+                  ? <TransitionScoreboard {...childProps} />
+                  : <InputBox {...childProps} />}
+              </LoadingView>
+            </Box>
+            <Center padding={5} rounded={20} bg={'white'} marginBottom={5}>
+              <Text fontSize={18} fontWeight={'semibold'} marginBottom={3}>All Strokes</Text>
+              <LoadingView isLoading={courseIsLoading}>
+                <GolfArray course={golfCourse}>
+                  <UsersStrokes usersStrokes={room.usersStrokes} course={golfCourse} />
+                </GolfArray>
+              </LoadingView>
+            </Center>
+          </ScrollView>
+          : <GolfPrepScreen
+            userId={userId}
+            roomName={roomName}
+            room={room}
+          />
+        }
       </Box>
     </>
   );
@@ -376,15 +351,8 @@ const InputBox = ({ room, roomName, golfCourse, userId, holeNumber, setShowTrans
       });
   };
 
-  const increment = () => {
-    if (inputVal >= 50) return;
-    setInputVal(inputVal + 1);
-  };
-
-  const decrement = () => {
-    if (inputVal <= 1) return;
-    setInputVal(inputVal - 1);
-  };
+  const increment = () => inputVal >= 50 ? null : setInputVal(inputVal + 1);
+  const decrement = () => inputVal <= 1 ? null : setInputVal(inputVal - 1);
 
   if (!userId || !golfCourse) return null;
 
@@ -399,50 +367,40 @@ const InputBox = ({ room, roomName, golfCourse, userId, holeNumber, setShowTrans
 
   let bg = par ? getColor(getColorType({ num: inputVal, arrType: 'Stroke', compareNumber: par })) : 'gray.100';
 
-  if (inputLoading) {
-    return (
-      <Center marginY={5}>
-        <Spinner size="lg" />
-      </Center>
-    );
-  }
   return (
-    <Center>
-      <Box>
+    <LoadingView isLoading={inputLoading}>
+      <Center>
         <Text fontSize={40}>Hole: {holeNumber}</Text>
-      </Box>
-      <Box>
         <Text fontSize={20}>Par: {par}</Text>
-      </Box>
-      <Center marginY={5}>
-        <Box
-          size={120}
-          rounded={40}
-          alignItems='center'
-          justifyContent='center'
-          marginBottom={5}
-          borderColor={bg}
-          borderWidth={5}
-        >
-          <Text fontSize={50}>{inputVal}</Text>
+        <Box marginY={5}>
+          <Box
+            size={120}
+            rounded={40}
+            alignItems='center'
+            justifyContent='center'
+            marginBottom={5}
+            borderColor={bg}
+            borderWidth={5}
+          >
+            <Text fontSize={50}>{inputVal}</Text>
+          </Box>
+          <HStack space={5}>
+            <TouchableOpacity onPress={decrement}>
+              <Entypo name="minus" size={50} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={increment}>
+              <Entypo name="plus" size={50} />
+            </TouchableOpacity>
+          </HStack>
         </Box>
-        <HStack space={5}>
-          <TouchableOpacity onPress={decrement}>
-            <Entypo name="minus" size={50} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={increment}>
-            <Entypo name="plus" size={50} />
-          </TouchableOpacity>
+        <HStack>
+          <Center flex={1}>
+            <Text fontSize={18}>{strokeDescription}</Text>
+          </Center>
+          <Button marginRight={5} onPress={updateUserStrokes}>Done</Button>
         </HStack>
       </Center>
-      <HStack>
-        {/* bg='yellow.100'  */}
-        <Center flex={1}>
-          <Text fontSize={18}>{strokeDescription}</Text>
-        </Center>
-        <Button marginRight={5} onPress={updateUserStrokes}>Done</Button>
-      </HStack>
-    </Center>
+    </LoadingView>
   );
 };
 

@@ -9,6 +9,7 @@ interface GetBetScores {
 };
 
 export const getBetScores = ({ userId, oppUid, course, room }: GetBetScores) => {
+  const roomHoleLimit = course.parArr.length;
   const userScores = room.usersStrokes[userId];
   const oppScores = room.usersStrokes[oppUid];
   const ids = [oppUid, userId].sort();
@@ -17,10 +18,10 @@ export const getBetScores = ({ userId, oppUid, course, room }: GetBetScores) => 
 
   const trueGive = Number(ids[0] === oppUid) ^ Number(handicapInfo.give); // userId gives or takes, give == 1, take == 0
 
-  const holes = Array.from({ length: 18 }, (_, i) => i + 1);
+  const holes = Array.from({ length: roomHoleLimit }, (_, i) => i + 1);
 
-  const frontHoles = holes.slice(0, holes.length / 2);//handicapIndexArr.slice(0, handicapIndexArr.length / 2);
-  const backHoles = holes.slice(holes.length / 2);//handicapIndexArr.slice(handicapIndexArr.length / 2);
+  const frontHoles = holes.slice(0, 9);
+  const backHoles = holes.slice(9);
 
   const compareFn = (holeA: number, holeB: number) => {
     const handicapA = handicapIndexArr[holeA - 1];
