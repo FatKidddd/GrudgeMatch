@@ -69,10 +69,9 @@ const BetRow = ({ userId, oppUid, course, room }: BetRowProps) => {
           },
         }}
       > */}
-      <GolfArray course={course}>
+      <GolfArray course={course} showCourseInfo={false}>
         <UserScores userScores={finalScores} uid={userId} oppUid={oppUid} />
       </GolfArray>
-      {/* </PresenceTransition> */}
     </VStack>
   );
 };
@@ -151,8 +150,8 @@ interface GolfRoomScreenProps {
 // may change usersStrokes to be a collection with multiple listeners to each player for scalability.
 // for now its just a more quick to implement solution
 const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenProps) => {
-  const [showTransitionScoreboard, setShowTransitionScoreboard] = useState(false);
   const [room, setRoom] = useState<GolfGame>();
+  const [showTransitionScoreboard, setShowTransitionScoreboard] = useState(false);
   // need to handle connectivity issue, what happens if data received is nothing?
   const [loading, setLoading] = useState(true);
   const [golfCourse, courseIsLoading] = useGolfCourse(room?.golfCourseId);
@@ -173,6 +172,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
         setRoom(data);
         setLoading(false);
         // handle game end
+        if (data.gameEnded) setShowTransitionScoreboard(true);
         if (data.gameEnded && !isSavedView) save();
       }
     });
@@ -181,14 +181,14 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
 
   // to handle game end
   useEffect(() => {
-    if (!room || room.gameEnded) return; // to only end game once
+    if (!room || room.gameEnded || !golfCourse) return; // to only end game once
     const usersStrokesArr = Object.values(room.usersStrokes);
     if (!usersStrokesArr) return;
     // handle all ended
     const userHoleNumbers = usersStrokesArr.map(arr => getUserHoleNumber(arr));
     const lowestHoleNumber = Math.min(...userHoleNumbers);
     console.log("lowestholenumber", lowestHoleNumber);
-    if (lowestHoleNumber === usersStrokesArr[0].length + 1) {
+    if (lowestHoleNumber === golfCourse.parArr.length + 1) {
       (async () => {
         const [res, err] = await tryAsync(updateDoc(roomRef, {
           gameEnded: true,

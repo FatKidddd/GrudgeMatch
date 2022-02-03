@@ -12,12 +12,13 @@ interface UserAvatarProps {
   size?: "sm" | "md" | "lg";
 };
 
-const UserAvatar = React.memo(({ userId, size="md", ...otherProps }: UserAvatarProps) => {
+const UserAvatar = React.memo(({ userId, size="sm", ...otherProps }: UserAvatarProps) => {
   // needs to be in a separate component like this because it uses a hook
   const [user, userIsLoading] = useUser(userId);
   if (!user) return <Spinner size="sm" />;
   // const avatarProps = { key: user.id } as any;
   // if (!!user.imageUrl) avatarProps.source = { uri: user.imageUrl };
+  const imageSize = size === "md" ? 50 : size === "lg" ? 120 : 40;
 
   return (
     // <Avatar {...avatarProps} marginRight={marginRight} zIndex={zIndex} size={size ? size : "md"} borderWidth={1} borderColor={'warmGray.100'}>
@@ -29,10 +30,10 @@ const UserAvatar = React.memo(({ userId, size="md", ...otherProps }: UserAvatarP
         ? <CachedImage
           key={user.id}
           uri={user.imageUrl}
-          style={{ height: 30, width: 30, resizeMode: 'contain', borderRadius: 100, borderWidth: 1, borderColor: '#eeeeee' }}
+          style={{ height: imageSize, width: imageSize, resizeMode: 'contain', borderRadius: 100, borderWidth: 1, borderColor: 'white' }}
           //debug={true}
         />
-        : <Box style={{ height: 30, width: 30, borderRadius: 100, borderWidth: 1, borderColor: '#eeeeee' }}>
+        : <Box style={{ height: imageSize, width: imageSize, borderRadius: 100, borderWidth: 1, borderColor: 'white' }}>
           <Text>
           {getInitials(user.name)}
           </Text>

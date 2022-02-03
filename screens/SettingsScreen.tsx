@@ -167,13 +167,13 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
           {/* <Avatar {...avatarProps}>
             {getInitials(user.name)}
           </Avatar> */}
-          <UserAvatar userId={user.id}/>
+          <UserAvatar userId={user.id} size="lg"/>
           <HStack marginY={15} width={220} space={3}>
             <Button
               onPress={_pickImage}
               leftIcon={<Icon as={MaterialCommunityIcons} name="pencil" size="sm" />}
               flex={1}
-              colorScheme='blue'
+              //colorScheme='blue'
             >
               Edit
             </Button>

@@ -8,6 +8,8 @@ interface GetBetScores {
   room: GolfGame;
 };
 
+export const sum = (arr: number[] | Stroke[]) => arr.length ? arr.map(e => Number(e)).reduce((prevVal, curVal) => prevVal + curVal) : 0;
+
 export const getBetScores = ({ userId, oppUid, course, room }: GetBetScores) => {
   const roomHoleLimit = course.parArr.length;
   const userScores = room.usersStrokes[userId];
@@ -55,7 +57,6 @@ export const getBetScores = ({ userId, oppUid, course, room }: GetBetScores) => 
 
   // console.log(finalScores);
 
-  const sum = (arr: number[] | Stroke[]) => arr.map(e => Number(e)).reduce((prevVal, curVal) => prevVal + curVal);
   const finalScore = sum(finalScores);
   return { finalScore, finalScores };
 };
@@ -73,7 +74,7 @@ export const getColorType = ({ num, arrType, compareNumber }: GetColorTypeProps)
     case 'Stroke':
       // comparisonArr is par arr
       if (compareNumber == null || compareNumber == undefined) return 0;
-      if (num < compareNumber) return 2;
+      if (num < compareNumber) return 3;
       else if (num === compareNumber) return 1;
       return 0;
     case 'Bet':
@@ -87,9 +88,11 @@ export const getColorType = ({ num, arrType, compareNumber }: GetColorTypeProps)
 export const getColor = (colorType: number) => {
   switch (colorType) {
     case 1:
-      return 'green.100';
+      return 'green.200';
     case 2:
-      return 'red.100';
+      return 'red.200';
+    case 3:
+      return 'green.400';
     default:
       return 'gray.100';
   }

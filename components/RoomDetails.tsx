@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { GolfGame } from '../types';
-import { Box, Popover, AlertDialog, Button } from 'native-base';
+import { Box, Popover, AlertDialog, Button, Text } from 'native-base';
 import ConfirmModal from './ConfirmModal';
 
 interface RoomDetailsProps {
@@ -11,6 +11,8 @@ interface RoomDetailsProps {
 
 const RoomDetails = ({ roomName, room, handleLeave }: RoomDetailsProps) => {
   const [leaveRoomIsOpen, setLeaveRoomIsOpen] = useState(false);
+
+  const handleOnPress = () => setLeaveRoomIsOpen(true);
 
   return (
     <>
@@ -25,12 +27,20 @@ const RoomDetails = ({ roomName, room, handleLeave }: RoomDetailsProps) => {
           <Popover.Content accessibilityLabel="Room Info" w="56">
             <Popover.Arrow />
             <Popover.CloseButton />
-            <Popover.Body>Room Name:</Popover.Body>
-            <Popover.Body>{roomName}</Popover.Body>
-            <Popover.Body>Password:</Popover.Body>
-            <Popover.Body>{room.password}</Popover.Body>
+            <Popover.Body>
+              <Box marginBottom={3}>
+                <Text>Room Name:</Text>
+                <Text>{roomName}</Text>
+              </Box>
+              {room.password
+                ? <Box>
+                  <Text>Password:</Text>
+                  <Text>{room.password}</Text>
+                </Box>
+                : null}
+            </Popover.Body>
             <Popover.Footer>
-              <Button colorScheme="danger" onPress={() => setLeaveRoomIsOpen(true)}>Leave room</Button>
+              <Button colorScheme={room.password ? "danger" : 'success' } onPress={handleOnPress}>Leave room</Button>
             </Popover.Footer>
           </Popover.Content>
         </Popover>

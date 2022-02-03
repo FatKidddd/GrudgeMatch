@@ -16,14 +16,12 @@ import { useIsMounted } from '../../../hooks/common';
 interface CourseViewProps {
   golfCourseId: string;
   setSelectedCourseId: (id: string) => void;
-  selectedCourseId: string;
+  isSelected: boolean;
 }
 
-const CourseView = ({ golfCourseId, setSelectedCourseId, selectedCourseId }: CourseViewProps) => {
+const CourseView = React.memo(({ golfCourseId, setSelectedCourseId, isSelected }: CourseViewProps) => {
   const [golfCourse, golfCourseIsLoading] = useGolfCourse(golfCourseId);
   if (!golfCourse) return null;
-  const canSelect = golfCourse.parArr.length === 18;
-  const isSelected = selectedCourseId === golfCourseId;
   const handleOnPress = () => setSelectedCourseId(isSelected ? '' : golfCourse.id);
   return (
     <Box padding={15} bgColor={'white'} shadow={3} rounded={20} marginBottom={3}>
@@ -32,22 +30,18 @@ const CourseView = ({ golfCourseId, setSelectedCourseId, selectedCourseId }: Cou
           <Box flex={1}>
             <Text fontSize={18} fontWeight={'semibold'}>{golfCourse.name}</Text>
           </Box>
-          {canSelect
-            ? <TouchableOpacity onPress={handleOnPress}>
-              <AntDesign name={isSelected ? 'checkcircle' : 'checkcircleo'} size={30} color={isSelected ? 'green' : 'gray'} />
-            </TouchableOpacity>
-            : null}
+          <TouchableOpacity onPress={handleOnPress}>
+            <AntDesign name={isSelected ? 'checkcircle' : 'checkcircleo'} size={30} color={isSelected ? 'green' : 'gray'} />
+          </TouchableOpacity>
         </HStack>
         <Box width={'100%'} alignItems={'flex-start'} marginBottom={3}>
           <Text>{golfCourse.location}</Text>
         </Box>
-        {canSelect
-          ? <GolfArray course={golfCourse} />
-          : null}
+        <GolfArray course={golfCourse} />
       </LoadingView>
     </Box>
   );
-};
+});
 
 const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
   const [golfCourseIds, setGolfCourseIds] = useState<Array<string>>([]);
@@ -97,8 +91,8 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
 
     const golfCoursesRef = collection(db, 'golfCourses');
     const q = lastVisible == undefined
-      ? query(golfCoursesRef, orderBy("name"), limit(5))
-      : query(golfCoursesRef, orderBy("name"), startAfter(lastVisible), limit(5));
+      ? query(golfCoursesRef, orderBy("name"), limit(2))
+      : query(golfCoursesRef, orderBy("name"), startAfter(lastVisible), limit(2));
 
     const [documentSnapshots, err] = await tryAsync(getDocs(q));
     if (!documentSnapshots || !isMounted.current) return;
@@ -144,6 +138,8 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
       .catch(err => console.error(err));
   };
 
+  const renderFooter = () => loading ? <Spinner size="lg" /> : null;
+
   return (
     <>
       {userId === room.gameOwnerUserId
@@ -158,14 +154,15 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
                 <CourseView
                   golfCourseId={golfCourseId}
                   setSelectedCourseId={setSelectedCourseId}
-                  selectedCourseId={selectedCourseId}
+                  isSelected={selectedCourseId === golfCourseId}
                 />
               )}
               keyExtractor={(item, i) => item + i}
               onEndReached={onEndReached}
-              onEndReachedThreshold={0.5}
-              initialNumToRender={5}
-              ListFooterComponent={loading ? <Spinner size="lg" /> : null}
+              onEndReachedThreshold={0.7}
+              initialNumToRender={3}
+              ListFooterComponent={renderFooter}
+              removeClippedSubviews={true}
             />
           </Box>
           <Box>

@@ -5,6 +5,7 @@ import { Asset } from 'expo-asset';
 import { Image } from 'react-native';
 import gamesData, { GameDataType } from '../gamesData';
 import React, { useState, useEffect } from 'react';
+import { createLocalFileCache, setDefaultImageCache } from '../components';
 
 const cacheImages = (images: any[]) => {
   return images.map(image => {
@@ -26,6 +27,9 @@ const useCachedResources = () => {
   const loadAssetsAsync = async () => {
     try {
       SplashScreen.preventAutoHideAsync();
+
+      setDefaultImageCache(createLocalFileCache()); // for CachedImage
+
       const imageAssets = cacheImages([
         // 'https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png',
         ...Object.values(gamesData).map((e: GameDataType) => e.imagePath)

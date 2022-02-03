@@ -211,7 +211,7 @@ const imageCacheRef = React.createRef<ICreateLocalFileCacheResult>();
 const defaultGetCacheEntry = (uri, options) => imageCacheRef.current.get(uri, options);
 const setDefaultImageCache = (cache: ICreateLocalFileCacheResult) => {
   (imageCacheRef as any).current = cache;
-  console.log('set cache')
+  console.log('set cache');
 };
 
 type ErrorType = { nativeEvent: { error: Error } }; // compatible with the ImageProps error.

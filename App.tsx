@@ -18,9 +18,7 @@ import { initializeAuth } from 'firebase/auth';
 import { getReactNativePersistence } from 'firebase/auth/react-native';
 
 import { SSRProvider } from '@react-aria/ssr';
-import { createLocalFileCache, setDefaultImageCache } from './components';
 
-setDefaultImageCache(createLocalFileCache());
 
 const firebaseConfig = {
   apiKey: "AIzaSyArYG40JyZ01TC1fC464x-VJ9_j2_5Bjl4",
@@ -36,10 +34,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Provide it to initializeAuth.
-const auth = initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
+// const auth = initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
 LogBox.ignoreLogs(['AsyncStorage has been extracted from react-native core and will be removed in a future release']); 
 
-export const theme = extendTheme({
+const theme = extendTheme({
   components: {
     Button: {
       // baseStyle: ({ colorScheme }) => ({
@@ -51,11 +49,11 @@ export const theme = extendTheme({
       //   font
       // },
       defaultProps: {
-        colorScheme: 'darkBlue',
+        colorScheme: 'teal',
         // variant: 'subtle'
-        _text: {
-          color: '#eeeeee'
-        }
+        // _text: {
+        //   color: 'white'
+        // }
       },
     },
   },

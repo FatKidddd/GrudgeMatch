@@ -2,10 +2,8 @@ import _ from 'lodash';
 import React, { useMemo } from 'react';
 import { HStack, Center, Text, Box, ScrollView, VStack, Spinner } from 'native-base';
 import { GolfCourse, GolfStrokes, Stroke } from '../types';
-import { getColor, getColorType } from '../utils/golfUtils';
+import { sum, getColor, getColorType } from '../utils/golfUtils';
 import { useUser } from '../hooks/useFireGet';
-
-const sum = (arr: number[] | Stroke[]) => arr.map(e => Number(e)).reduce((prevVal, curVal) => prevVal + curVal);
 
 const Tile = ({ num, color }: { num: Stroke | string, color: string }) => {
   return (
@@ -22,10 +20,8 @@ interface ArrProps {
   comparisonArr?: Array<number>;
 };
 
-const Row = ({ text, arr, arrType, comparisonArr }: ArrProps) => {
-  if (!arr || arr.length != 18) return null;
-  //console.log(text, arr, arrType, comparisonArr);
-  
+const Row = React.memo(({ text, arr, arrType, comparisonArr }: ArrProps) => {
+  // console.log(text, arr, arrType, comparisonArr);
   const renderHalf = (half: number[] | Stroke[], compareHalf?: number[]) => {
     return half.map((num, i) => {
       const compareNumber = compareHalf ? compareHalf[i] : undefined;
@@ -62,14 +58,38 @@ const Row = ({ text, arr, arrType, comparisonArr }: ArrProps) => {
       <Box marginX={3}>
         {renderSumTile(shouldSum, front, compareFront)}
       </Box>
-      {renderHalf(back, compareBack)}
-      <Box marginX={3}>
-        {renderSumTile(shouldSum, back, compareBack)}
-      </Box>
+      {back.length
+        ? <>
+          {renderHalf(back, compareBack)}
+          <Box marginX={3}>
+            {renderSumTile(shouldSum, back, compareBack)}
+          </Box>
+        </>
+        : null}
       {renderSumTile(shouldSum, arr, comparisonArr)}
     </HStack>
   );
-};
+});
+
+interface UserRowProps {
+  uid: string;
+  strokes: GolfStrokes;
+  parArr: Array<number>;
+}
+const UserRow = React.memo(({ uid, strokes, parArr }: UserRowProps) => {
+  const [user, userIsLoading] = useUser(uid);
+  const paddedStrokes = strokes.slice();
+  if (parArr.length > strokes.length)
+    paddedStrokes.push(...new Array(parArr.length - strokes.length).fill(null));
+  return (
+    <Row
+      text={user?.name}
+      arr={paddedStrokes}
+      arrType='Stroke'
+      comparisonArr={parArr}
+    />
+  );
+});
 
 interface UsersStrokesProps {
   usersStrokes: {
@@ -83,24 +103,9 @@ const UsersStrokes = React.memo(({ usersStrokes, course }: UsersStrokesProps) =>
 
   const sortedStrokes = Object.entries(usersStrokes).sort();
   return (
-    <VStack>
-      {sortedStrokes.map(([uid, strokes], i) => {
-        // console.log(uid);
-        // console.log(strokes)
-        // console.log(course.parArr)
-        const [user, userIsLoading] = useUser(uid);
-        return (
-          <Box key={uid}>
-            <Row
-              text={user?.name}
-              arr={strokes}
-              arrType='Stroke'
-              comparisonArr={course.parArr}
-            />
-          </Box>
-        );
-      })}
-    </VStack>
+    <>
+      {sortedStrokes.map(([uid, strokes], i) => <UserRow key={uid} uid={uid} strokes={strokes} parArr={course.parArr} />)}
+    </>
   );
 });
 
@@ -129,8 +134,9 @@ interface GolfArrayProps {
   showCourseInfo?: boolean;
 };
 
-// I've tried so many ways to fix the garbage performance of this
-const GolfArray = ({ course, children, showCourseInfo }: GolfArrayProps) => {
+// I've tried so many ways to fix the garbage performance of this, turns out the issue is that rendering new UI will not be memoized lol so when showing and hiding it kills everything
+const GolfArray = React.memo(({ course, children, showCourseInfo=true }: GolfArrayProps) => {
+  console.log('rendered GolfArray');
   if (!course) return null;
   const numOfHoles = course.parArr.length;
   return (
@@ -141,21 +147,14 @@ const GolfArray = ({ course, children, showCourseInfo }: GolfArrayProps) => {
         </Box>
         {showCourseInfo
           ? <Box marginBottom={3}>
-            <Box>
-              <Row text="Par" arr={course.parArr} arrType='Par' />
-            </Box>
-            <Box>
-              <Row text="Handicap" arr={course.handicapIndexArr} arrType='Handicap' />
-            </Box>
+            <Row text="Par" arr={course.parArr} arrType='Par' />
+            <Row text="Handicap" arr={course.handicapIndexArr} arrType='Handicap' />
           </Box>
           : null}
         {children}
       </VStack>
     </ScrollView>
   );
-};
-//   , function areEqual(prevProps, nextProps) {
-//   return prevProps.course.id === nextProps.course.id && _.isEqual(prevProps.children, nextProps.children);
-// });
+});
 
 export { GolfArray, UsersStrokes, UserScores, getColor, getColorType };
