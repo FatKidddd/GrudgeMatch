@@ -14,8 +14,8 @@
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#14b8a6"
+      "resizeMode": "cover",
+      "backgroundColor": "#ffffff"
     },
     "updates": {
       "fallbackToCacheTimeout": 0
@@ -24,16 +24,19 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fatkid.GrudgeMatch"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#14b8a6"
-      }
+        "backgroundColor": "#white"
+      },
+      "package": "com.fatkid.GrudgeMatch"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
-    }
+    },
+    "jsEngine": "hermes"
   }
 }

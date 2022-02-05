@@ -140,6 +140,14 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
 
   const renderFooter = () => loading ? <Spinner size="lg" /> : null;
 
+  const renderItem = ({ item: golfCourseId }: { item: string }) => (
+    <CourseView
+      golfCourseId={golfCourseId}
+      setSelectedCourseId={setSelectedCourseId}
+      isSelected={selectedCourseId === golfCourseId}
+    />
+  );
+
   return (
     <>
       {userId === room.gameOwnerUserId
@@ -150,13 +158,7 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
           <Box flex={1} marginBottom={3}>
             <FlatList
               data={golfCourseIds}
-              renderItem={({ item: golfCourseId }: { item: string }) => (
-                <CourseView
-                  golfCourseId={golfCourseId}
-                  setSelectedCourseId={setSelectedCourseId}
-                  isSelected={selectedCourseId === golfCourseId}
-                />
-              )}
+              renderItem={renderItem}
               keyExtractor={(item, i) => item + i}
               onEndReached={onEndReached}
               onEndReachedThreshold={0.7}
