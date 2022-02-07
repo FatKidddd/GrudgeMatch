@@ -1,69 +1,122 @@
-import _ from 'lodash';
-import React, { useMemo } from 'react';
-import { HStack, Center, Text, Box, ScrollView, VStack, Spinner } from 'native-base';
+import _, { uniqueId } from 'lodash';
+import React, { useCallback, useMemo } from 'react';
+import { HStack, Center, Text, Box, ScrollView, VStack, Spinner, FlatList } from 'native-base';
 import { GolfCourse, GolfStrokes, Stroke } from '../types';
 import { sum, getColor, getColorType } from '../utils/golfUtils';
 import { useUser } from '../hooks/useFireGet';
 
-const Tile = ({ num, color }: { num: Stroke | string, color: string }) => {
-  return <Center width="30" height="30" bg={color}>{num}</Center>;
+interface TileProps {
+  num: Stroke | string;
+  color: string;
+  [key: string]: any;
 };
+
+const Tile = React.memo(({ num, color, ...props }: TileProps) => {
+  return <Box width="30" height="30" bg={color} justifyContent='center' alignItems={'center'} {...props}>{num}</Box>;
+});
+
+type ArrType = 'Stroke' | 'Bet' | 'Par' | 'Hole' | 'Handicap';
+
+// interface HalfProps {
+//   half: number[] | Stroke[];
+//   compareHalf?: number[];
+//   arrType?: ArrType;
+// };
+
+// const Half = React.memo(({ half, compareHalf, arrType }: HalfProps) => {
+//   console.log('rendered half');
+//   return (
+//     <>
+//       {half.map((num, i) => {
+//         const compareNumber = compareHalf ? compareHalf[i] : undefined;
+//         const colorType = getColorType({ num, arrType, compareNumber });
+//         return <Tile key={i} num={num} color={getColor(colorType)} />;
+//       })}
+//     </>
+//   );
+// });
+
+// interface SumTileProps {
+//   shouldSum: boolean;
+//   givenArr: number[] | Stroke[];
+//   givenCompareArr?: number[] | Stroke[];
+//   arrType?: ArrType;
+//   [key: string]: any;
+// };
+
+// const SumTile = React.memo(({ shouldSum, givenArr, givenCompareArr, arrType, ...props }: SumTileProps) => {
+//   const summation = shouldSum ? sum(givenArr) : null;
+//   const colorType = getColorType({
+//     num: summation,
+//     arrType,
+//     compareNumber: givenCompareArr ? sum(givenCompareArr) : undefined
+//   });
+//   return <Tile num={summation} color={getColor(colorType)} {...props} />;
+// });
 
 interface RowProps {
   text: string | undefined;
   arr: Array<number | null> | GolfStrokes;
-  arrType?: 'Stroke' | 'Bet' | 'Par' | 'Hole' | 'Handicap';
-  comparisonArr?: Array<number>;
+  arrType?: ArrType;
+  comparisonArr?: Array<number | null>;
   [key: string]: any;
 };
 
+const sumIfInList = ['Stroke', 'Bet', 'Par'];
+
+const sumFrom = (arr: (number | null | undefined)[] | undefined, idx1: number, idx2: number) => {
+  let res = 0;
+  if (!arr) return res;
+  for (let i = idx1; i < Math.min(arr.length, idx2); i++)
+    if (typeof arr[i] === 'number')
+      res += arr[i] as number;
+  return res;
+};
+
 const Row = React.memo(({ text, arr, arrType, comparisonArr, ...props }: RowProps) => {
-  // console.log(text, arr, arrType, comparisonArr);
-  const renderHalf = (half: number[] | Stroke[], compareHalf?: number[]) => {
-    return half.map((num, i) => {
-      const compareNumber = compareHalf ? compareHalf[i] : undefined;
-      const colorType = getColorType({ num, arrType, compareNumber });
-      return <Tile key={i} num={num} color={getColor(colorType)} />;
-    });
-  };
-
-  const renderSumTile = (shouldSum: boolean, givenArr: number[] | Stroke[], givenCompareArr?: number[] | Stroke[]) => {
-    const summation = shouldSum ? sum(givenArr) : null;
-    const colorType = getColorType({
-      num: summation,
-      arrType,
-      compareNumber: givenCompareArr ? sum(givenCompareArr) : undefined
-    });
-    return <Tile num={summation} color={getColor(colorType)} />;
-  };
-
-  const front = arr.slice(0, 9);
-  const back = arr.slice(9);
-  const compareFront = comparisonArr ? comparisonArr.slice(0, 9) : undefined;
-  const compareBack = comparisonArr ? comparisonArr.slice(9) : undefined;
-
-  const sumIfInList = ['Stroke', 'Bet', 'Par'];
   const shouldSum = !!sumIfInList.find(e => e === arrType);
+  const sumArr = [sumFrom(arr, 0, 9), sumFrom(arr, 9, 18)];
+  const sumArrTotal = sumArr[0] + sumArr[1];
+  const sumComparisonArr = [sumFrom(comparisonArr, 0, 9), sumFrom(comparisonArr, 9, 18)];
+  const sumComparisonArrTotal = sumComparisonArr[0] + sumComparisonArr[1];
+
+  const body = useMemo(() => {
+    // console.log('rendered body');
+    const res: JSX.Element[] = [];
+    arr.forEach((num, i) => {
+      const compareNumber = comparisonArr ? comparisonArr[i] : undefined;
+      const colorType = getColorType({ num, arrType, compareNumber });
+      res.push(<Tile key={i} num={num} color={getColor(colorType)} />);
+      if ((i + 1) % 9 === 0) {
+        res.push(
+          <Tile
+            key={'sum' + i}
+            num={shouldSum ? sumArr[(i + 1) / 9 - 1] : null}
+            color={getColor(getColorType({
+              num: shouldSum ? sumArr[(i + 1) / 9 - 1] : null,
+              arrType,
+              compareNumber: shouldSum ? sumComparisonArr[(i + 1) / 9 - 1] : undefined
+            }))}
+            marginX={3}
+          />
+        )
+      }
+    });
+    return res;
+  }, [arr, comparisonArr]);
 
   return (
     <HStack {...props}>
-      <Center width={110} alignItems={"flex-end"} paddingRight={2}>
-        <Text numberOfLines={1}>{text}</Text>
-      </Center>
-
-      {renderHalf(front, compareFront)}
-      <Box marginX={3}>
-        {renderSumTile(shouldSum, front, compareFront)}
-      </Box>
-      {back.length
-        ? <>
-          {renderHalf(back, compareBack)}
-          <Box marginX={3}>
-            {renderSumTile(shouldSum, back, compareBack)}
-          </Box>
-        </>
-        : null}
-      {renderSumTile(shouldSum, arr, comparisonArr)}
+      <Text numberOfLines={1} width={110} textAlign='right' paddingRight={2}>{text}</Text>
+      {body}
+      <Tile
+        num={shouldSum ? sumArrTotal : null}
+        color={getColor(getColorType({
+          num: shouldSum ? sumArrTotal : null,
+          arrType,
+          compareNumber: shouldSum ? sumComparisonArrTotal : undefined
+        }))}
+      />
     </HStack>
   );
 });
@@ -98,13 +151,11 @@ interface UsersStrokesProps {
 
 const UsersStrokes = React.memo(({ usersStrokes, course }: UsersStrokesProps) => {
   if (!course) return null;
-
   const sortedStrokes = Object.entries(usersStrokes).sort();
-  return (
-    <>
-      {sortedStrokes.map(([uid, strokes], i) => <UserRow key={uid} uid={uid} strokes={strokes} parArr={course.parArr} />)}
-    </>
-  );
+  const renderItem = useCallback(([uid, strokes], i) =>
+    <UserRow key={uid} uid={uid} strokes={strokes} parArr={course.parArr} />
+  , []);
+  return <>{sortedStrokes.map(renderItem)}</>;
 });
 
 interface UserScoresProps {
@@ -139,10 +190,18 @@ const GolfArray = React.memo(({ course, children, showCourseInfo=true }: GolfArr
   if (!course) return null;
   // console.log('rendered GolfArray');
   const numOfHoles = course.parArr.length;
+  const holes = Array.from({ length: numOfHoles }, (_, i) => i + 1);
   return (
     <ScrollView horizontal>
+      {/* <FlatList
+        data={Array.from({ length: 200 }, (_, i) => i + 1)}
+        renderItem={({ item }) => <Text>{item}</Text>}
+        keyExtractor={(item) => item}
+        horizontal={true}
+        scrollEnabled={false}
+      /> */}
       <VStack>
-        <Row text="Hole" arr={Array.from({ length: numOfHoles }, (_, i) => i + 1)} arrType='Hole' marginBottom={3}/>
+        <Row text="Hole" arr={holes} arrType='Hole' marginBottom={3}/>
         {showCourseInfo
           ? <>
             <Row text="Par" arr={course.parArr} arrType='Par' />

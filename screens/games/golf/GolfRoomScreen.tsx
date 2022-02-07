@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Text, Popover, Button, Center, Box, HStack, ScrollView, VStack, PresenceTransition, useToast, Spinner, StatusBar, IconButton, Icon } from "native-base";
+import { Text, Popover, Button, Center, Box, HStack, ScrollView, VStack, PresenceTransition, useToast, Spinner, StatusBar, IconButton, Icon, FlatList } from "native-base";
 import { TouchableOpacity } from 'react-native';
 import { Entypo, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { getFirestore, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, collection, deleteField, getDoc, addDoc, setDoc } from 'firebase/firestore';
@@ -22,7 +22,7 @@ interface BetRowProps {
   room: GolfGame;
 };
 
-const BetRow = ({ userId, oppUid, course, room }: BetRowProps) => {
+const BetRow = React.memo(({ userId, oppUid, course, room }: BetRowProps) => {
   const [showDetail, setShowDetail] = useState(false);
   const [user, userIsLoading] = useUser(userId);
   const [oppUser, oppUserIsLoading] = useUser(oppUid);
@@ -74,7 +74,7 @@ const BetRow = ({ userId, oppUid, course, room }: BetRowProps) => {
       </GolfArray>
     </VStack>
   );
-};
+});
 
 interface TransitionScoreboardProps {
   userId: string | undefined;
@@ -114,6 +114,16 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
   const sortedUserIds = useMemo(() => Object.keys(room.usersStrokes).filter((val) => val != userId).sort(), [room.usersStrokes]);
   const roomHoleLimit = golfCourse.parArr.length;
 
+  const renderItem = useCallback((uid) =>
+    <BetRow
+      key={uid}
+      userId={userId}
+      oppUid={uid}
+      course={golfCourse}
+      room={room}
+    />
+    , []);
+
   return (
     <Box paddingX={5}>
       <HStack alignItems='center'>
@@ -133,14 +143,7 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
             : <Box width={30}></Box>
           : null}
       </HStack>
-      {sortedUserIds.map((uid) =>
-        <BetRow
-          key={uid}
-          userId={userId}
-          oppUid={uid}
-          course={golfCourse}
-          room={room}
-        />)}
+      {sortedUserIds.map(renderItem)}
     </Box>
   );
 });

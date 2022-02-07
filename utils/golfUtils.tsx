@@ -65,11 +65,11 @@ export const getBetScores = ({ userId, oppUid, course, room }: GetBetScores) => 
 interface GetColorTypeProps {
   num: Stroke;
   arrType?: 'Stroke' | 'Bet' | 'Par' | 'Hole' | 'Handicap';
-  compareNumber?: number;
+  compareNumber?: number | null;
 };
 
 export const getColorType = ({ num, arrType, compareNumber }: GetColorTypeProps) => {
-  if (num == null || num == undefined) return 0;
+  if (typeof num !== 'number') return 0;
   switch (arrType) {
     case 'Stroke':
       // comparisonArr is par arr

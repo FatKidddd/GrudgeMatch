@@ -37,6 +37,9 @@
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
-    "jsEngine": "hermes"
+    "jsEngine": "hermes",
+    "plugins": [
+      "expo-community-flipper"
+    ]
   }
 }

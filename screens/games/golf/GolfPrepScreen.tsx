@@ -113,10 +113,12 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
 
       // update lastVisible
       const newLastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      if (!isMounted.current) return;
       setLastVisible(newLastVisible);
 
       // add golfCourseIds
       const newGolfCourseIds = newGolfCourses.map(newGolfCourse => newGolfCourse.id); 
+      if (!isMounted.current) return;
       setGolfCourseIds([...golfCourseIds, ...newGolfCourseIds]);
     }
     if (!isMounted.current) return;

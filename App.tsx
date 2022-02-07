@@ -20,6 +20,15 @@ import { initializeApp } from "firebase/app";
 import { SSRProvider } from '@react-aria/ssr';
 import { initializeFirestore } from "firebase/firestore"; 
 
+import { connectToDevTools } from "react-devtools-core";
+
+if (__DEV__) {
+  connectToDevTools({
+    host: "localhost",
+    port: 8097,
+  });
+}
+
 const firebaseConfig = {
   apiKey: "AIzaSyArYG40JyZ01TC1fC464x-VJ9_j2_5Bjl4",
   authDomain: "grudgematch-594b7.firebaseapp.com",
@@ -33,10 +42,9 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 initializeFirestore(app, {
-  // @ts-ignore
-  useFetchStreams: false,
-  cacheSizeBytes: 100000000,
-  experimentalForceLongPolling: true
+  // useFetchStreams: false,
+  // cacheSizeBytes: 100000000,
+  experimentalForceLongPolling: true // bug fix for when running on android standalone app
 });
 // enableIndexedDbPersistence(getFirestore())
 //   .catch((err) => {
