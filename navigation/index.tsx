@@ -78,6 +78,7 @@ const HomeNavigator = () => {
               onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
               style={({ pressed }) => ({
                 opacity: pressed ? 0.5 : 1,
+                marginRight: 15
               })}>
               <Ionicons
                 name="md-menu"
@@ -98,6 +99,7 @@ const HomeNavigator = () => {
               onPress={() => navigation.navigate('Games')}
               style={({ pressed }) => ({
                 opacity: pressed ? 0.5 : 1,
+                marginRight: 15
               })}>
               <FontAwesome
                 name="chevron-left"

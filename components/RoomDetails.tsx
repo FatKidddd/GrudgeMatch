@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { GolfGame } from '../types';
 import { Box, Popover, AlertDialog, Button, Text } from 'native-base';
 import ConfirmModal from './ConfirmModal';
+import { useIsMounted } from '../hooks/common';
 
 interface RoomDetailsProps {
   roomName: string;
@@ -11,8 +12,10 @@ interface RoomDetailsProps {
 
 const RoomDetails = ({ roomName, room, handleLeave }: RoomDetailsProps) => {
   const [leaveRoomIsOpen, setLeaveRoomIsOpen] = useState(false);
+  const isMounted = useIsMounted();
 
-  const handleOnPress = () => setLeaveRoomIsOpen(true);
+  const handleOnPress = () => isMounted.current ? setLeaveRoomIsOpen(true) : null;
+  const onClose = () => isMounted.current ? setLeaveRoomIsOpen(false) : null;
 
   return (
     <>
@@ -47,7 +50,7 @@ const RoomDetails = ({ roomName, room, handleLeave }: RoomDetailsProps) => {
         
         <ConfirmModal
           isOpen={leaveRoomIsOpen}
-          onClose={() => setLeaveRoomIsOpen(false)}
+          onClose={onClose}
           callback={handleLeave}
           headerDesc='Leave room permanently?'
           buttonDesc='Leave'

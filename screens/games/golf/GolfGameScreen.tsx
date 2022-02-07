@@ -16,6 +16,7 @@ import { getBetScores, getColor, getColorType } from "../../../utils/golfUtils";
 import { tryAsync } from '../../../utils/asyncUtils';
 import { addSavedRooms } from '../../../redux/features/gamesHistory';
 import { formatData } from '../../../utils/dateUtils';
+import { useIsMounted } from '../../../hooks/common';
 
 const RoomModalButtons = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -24,10 +25,11 @@ const RoomModalButtons = () => {
   const [password, setPassword] = useState("");
   const [errorIsOpen, setErrorIsOpen] = useState(false);
   const [createOrJoin, setCreateOrJoin] = useState(true);
-
-  const handleClick = () => setShow(!show);
-  const onClose = () => setErrorIsOpen(false);
   const cancelRef = useRef(null);
+
+  const db = getFirestore();
+
+  const onClose = () => setErrorIsOpen(false);
   
   const handleRoomError = () => setErrorIsOpen(true);
 
@@ -40,7 +42,6 @@ const RoomModalButtons = () => {
   const handleCreateRoom = () => {
     if (!createRoomChecks) return handleRoomError();
 
-    const db = getFirestore();
     const roomRef = doc(db, 'rooms', roomName);
 
     // check for existing roomName
@@ -72,7 +73,6 @@ const RoomModalButtons = () => {
           .then(res => {
             console.log("New room created");
             handleJoinRoom();
-            setShow(false);
           })
           .catch(err => {
             console.error(err);
@@ -84,7 +84,6 @@ const RoomModalButtons = () => {
   };
 
   const handleJoinRoom = () => {
-    const db = getFirestore();
     const roomRef = doc(db, 'rooms', roomName);
     const auth = getAuth();
     const userId = auth.currentUser?.uid;
@@ -105,7 +104,6 @@ const RoomModalButtons = () => {
           await updateDoc(userRef, {
             [`roomNames.${'golf'}`]: roomName
           });
-          setShow(false);
         } else {
           handleRoomError();
         }
@@ -180,11 +178,7 @@ const RoomModalButtons = () => {
       </AlertDialog>
       
       <HStack space={8} alignItems="center">
-        <TouchableOpacity
-          onPress={() => {
-            setModalVisible(!modalVisible);
-          }}
-        >
+        <TouchableOpacity onPress={() => setModalVisible(!modalVisible)}>
           <Ionicons name="add" size={30} />
         </TouchableOpacity>
       </HStack>
@@ -206,7 +200,6 @@ interface RoomViewProps {
 const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
   const [room, roomIsLoading] = useRoom(roomName);
   const [golfCourse, golfCourseIsLoading] = useGolfCourse(room?.golfCourseId);
-
 
   if (!room || !room.userIds || !golfCourse) return null;
 
@@ -239,7 +232,6 @@ const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
 
   const FINAL_SCORES_LIMIT = 4;
 
-
   // there is a bug here where firebase get is called twice because UsersBar and FinalScoreTile both have useUser
   
   return (
@@ -269,7 +261,7 @@ const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
 };
 
 const FinalScoreTile = ({ userId, userFinalScore }: { userId: string, userFinalScore: number }) => {
-  const [user, userIsLoading] = useUser(userId, true); //hacky fix
+  const [user, userIsLoading] = useUser(userId);
   return (
     <Center width={70}>
       <LoadingView isLoading={userIsLoading} alignItems={'center'}>
@@ -296,6 +288,8 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
   const [noMoreRooms, setNoMoreRooms] = useState(false);
   const [roomNameDetailed, setRoomNameDetailed] = useState<string>();
 
+  const isMounted = useIsMounted();
+
   const db = getFirestore();
   const golfHistoryRef = collection(db, 'users', userId, 'golfHistory');
   
@@ -304,7 +298,7 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
   }, []);
 
   const getSavedRooms = async () => {
-    if (loading) return;
+    if (loading || !isMounted.current) return;
 
     setLoading(true);
 
@@ -315,11 +309,11 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
     }
 
     const q = trueLast == undefined
-      ? query(golfHistoryRef, orderBy("dateSaved"), limit(5))
-      : query(golfHistoryRef, orderBy("dateSaved"), startAfter(trueLast), limit(5));
+      ? query(golfHistoryRef, orderBy("dateSaved", "desc"), limit(5))
+      : query(golfHistoryRef, orderBy("dateSaved", "desc"), startAfter(trueLast), limit(5));
 
     const [documentSnapshots, err] = await tryAsync(getDocs(q));
-    if (!documentSnapshots) return;
+    if (!documentSnapshots || !isMounted.current) return;
 
     // if no more past games
     if (!documentSnapshots.docs.length) setNoMoreRooms(true);
@@ -345,6 +339,7 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
   };
 
   const handleBackButton = () => {
+    if (!isMounted.current) return;
     if (roomNameDetailed) return setRoomNameDetailed("");
     navigation.navigate("Games");
   };
@@ -383,8 +378,8 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
               data={savedRooms}
               renderItem={renderItem}
               keyExtractor={(item, i) => item.id + i}
-              //onEndReached={onEndReached}
-              //onEndReachedThreshold={0.5}
+              onEndReached={onEndReached}
+              onEndReachedThreshold={0.5}
               ListFooterComponent={loading ? <Spinner size="sm" /> : null}
             />
           </Box>}
@@ -400,6 +395,7 @@ interface GolfGameScreenProps {
 const GolfGameScreen = ({ navigation }: GolfGameScreenProps) => {
   const [roomName, setRoomName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const isMounted = useIsMounted();
 
   const auth = getAuth();
   if (!auth.currentUser) return null;
@@ -410,13 +406,13 @@ const GolfGameScreen = ({ navigation }: GolfGameScreenProps) => {
   useEffect(() => {
     const unsubscribe = onSnapshot(userRef, async (res) => {
       const data = res.data();
-      setRoomName(data?.roomNames && data.roomNames['golf'] ? data.roomNames['golf'] : "");
-      setIsLoading(false);
+      if (isMounted.current) {
+        setRoomName(data?.roomNames && data.roomNames['golf'] ? data.roomNames['golf'] : "");
+        setIsLoading(false);
+      }
     }, (err) => console.error(err));
 
-    return function cleanup() {
-      unsubscribe();
-    }
+    return () => unsubscribe();
   }, []);
 
   const props = {

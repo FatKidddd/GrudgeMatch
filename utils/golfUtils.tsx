@@ -32,15 +32,15 @@ export const getBetScores = ({ userId, oppUid, course, room }: GetBetScores) => 
   };
   // console.log(frontHoles.sort(compareFn), backHoles.sort(compareFn));
 
-  const neededFrontHoles = frontHoles.sort(compareFn).slice(0, handicapInfo.frontCount);
-  const neededBackHoles = backHoles.sort(compareFn).slice(0, handicapInfo.backCount);
+  const sortedFrontHoles = frontHoles.sort(compareFn).slice(0, handicapInfo.frontCount);
+  const sortedBackHoles = backHoles.sort(compareFn).slice(0, handicapInfo.backCount);
 
   // console.log(neededFrontHoles, neededBackHoles);
   
   const set = new Set();
-  for (const val of neededFrontHoles) set.add(val);
-  for (const val of neededBackHoles) set.add(val);
-
+  for (let i = 0; i < Math.min(handicapInfo.frontCount, sortedFrontHoles.length); i++) set.add(sortedFrontHoles[i]);
+  for (let i = 0; i < Math.min(handicapInfo.backCount, sortedBackHoles.length); i++) set.add(sortedBackHoles[i]);
+  
   const pairScores = [userScores.slice(), oppScores.slice()];
   for (let i = 0; i < pairScores[trueGive].length; i++) {
     const val = pairScores[trueGive][i];
@@ -92,7 +92,7 @@ export const getColor = (colorType: number) => {
     case 2:
       return 'red.200';
     case 3:
-      return 'green.400';
+      return 'green.500';
     default:
       return 'gray.100';
   }

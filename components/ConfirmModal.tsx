@@ -15,6 +15,12 @@ const ConfirmModal = ({ isOpen, onClose, callback, headerDesc, buttonDesc }: Con
   const cancelRef = useRef(null);
   const dispatch = useAppDispatch();
 
+  const onPress = () => {
+    // onClose();
+    dispatch(deleteSavedRooms('golf'));
+    callback();
+  };
+
   return (
     <AlertDialog
       leastDestructiveRef={cancelRef}
@@ -27,11 +33,7 @@ const ConfirmModal = ({ isOpen, onClose, callback, headerDesc, buttonDesc }: Con
         <AlertDialog.Footer>
           <Button
             colorScheme="danger"
-            onPress={() => {
-              onClose();
-              dispatch(deleteSavedRooms('golf'));
-              callback();
-            }}
+            onPress={onPress}
             ref={cancelRef}
           >
             {buttonDesc}

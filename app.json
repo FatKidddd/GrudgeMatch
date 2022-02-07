@@ -25,14 +25,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.fatkid.GrudgeMatch"
+      "bundleIdentifier": "com.fatkid.grudgematch"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#white"
+        "backgroundColor": "#ffffff"
       },
-      "package": "com.fatkid.GrudgeMatch"
+      "package": "com.fatkid.grudgematch"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"

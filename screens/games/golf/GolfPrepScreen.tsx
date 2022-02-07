@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getDoc, updateDoc, getDocs, getFirestore, collection, doc, addDoc, DocumentSnapshot, DocumentData, query, limit, startAfter, orderBy } from 'firebase/firestore';
 import { User, GolfCourse, GolfGame, HandicapInfo } from '../../../types';
 import { Box, FlatList, Heading, Avatar, HStack, VStack, Text, Spacer, Center, Button, Input, Pressable, ScrollView, Spinner } from "native-base";
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, KeyboardAvoidingView } from 'react-native';
 import { AntDesign, Fontisto, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GolfArray, LoadingView, UserAvatar } from '../../../components';
@@ -11,7 +11,6 @@ import { useAppDispatch, useAppSelector } from '../../../hooks/selectorAndDispat
 import { tryAsync } from '../../../utils/asyncUtils';
 import { addGolfCourses, setGolfCourse } from '../../../redux/features/golfCourses';
 import { useIsMounted } from '../../../hooks/common';
-    let json = require('./data.json');
 
 interface CourseViewProps {
   golfCourseId: string;
@@ -72,11 +71,12 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
   const addCoursesFromJson = () => {
     // console.log(json);
     // console.log("hi")
-    const colRef = collection(db, 'golfCourses');
-    for (const obj of json) {
-      // console.log(obj)
-      addDoc(colRef, obj);
-    }
+    // const colRef = collection(db, 'golfCourses');
+    // let json = require('./data.json');
+    // for (const obj of json) {
+    //   // console.log(obj)
+    //   addDoc(colRef, obj);
+    // }
     // addDoc(colRef, {
     //   name: "ass",
     //   location: "penis",
@@ -104,7 +104,6 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
       console.log("Got golf courses");
       const newGolfCourses = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as GolfCourse));
 
-      // may need to make this async?
       if (!isMounted.current) return;
       dispatch(addGolfCourses(newGolfCourses));
 
@@ -262,6 +261,7 @@ const HandicapRow = ({ userId, oppUid, room, roomName }: HandicapRowProps) => {
           fontSize={20}
           rounded={10}
           textAlign={'center'}
+          autoCorrect={false}
         />
         </Box>
       </Center>
@@ -310,9 +310,6 @@ const HandicapRow = ({ userId, oppUid, room, roomName }: HandicapRowProps) => {
 const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => {
   const [course, courseIsLoading] = useGolfCourse(room.golfCourseId);
 
-  const db = getFirestore();
-  const roomRef = doc(db, 'rooms', roomName);
-
   const handleStart = () => {
     const req = room.userIds.length * (room.userIds.length - 1) / 2;
     let count = 0;
@@ -323,6 +320,8 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
       console.log("Prep not done, cannot start");
       return;
     }
+    const db = getFirestore();
+    const roomRef = doc(db, 'rooms', roomName);
 
     updateDoc(roomRef, {
       prepDone: true
@@ -339,37 +338,42 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
     return <HandicapRow userId={userId} oppUid={item} room={room} roomName={roomName} />;
   };
 
-  const len = room.userIds.length;
-  let cnt = 0;
-  for (const [key, val] of Object.entries(room.pointsArr))
-    if (val.locked)
-      cnt++;
-  const isReady = len * (len - 1) / 2 === cnt;
+  const isReady = useMemo(() => {
+    const len = room.userIds.length;
+    let cnt = 0;
+    for (const val of Object.values(room.pointsArr))
+      if (val.locked)
+        cnt++;
+    return len * (len - 1) / 2 === cnt;
+  }, [room.userIds.length, room.pointsArr]);
+
+  const userIds = useMemo(() => room.userIds.filter(uid => uid != userId), [room.userIds]);
 
   return (
-    <VStack flex={1} marginY={3} >
-      <Center bg="white" padding={15} rounded={20} width="100%" flex={1} maxHeight={200}>
-        <Text fontSize={18} fontWeight="500" marginBottom={3}>Handicap</Text>
-        <LoadingView isLoading={courseIsLoading}>
-          <GolfArray course={course} />
-        </LoadingView>
-      </Center>
-      <Box flex={1}>
-        <FlatList
-          data={room.userIds.filter(uid => uid != userId)}
-          renderItem={renderItem}
-          keyExtractor={(item) => item} // since the item is the user id itself
-        />
-      </Box>
-      <Center>
-        {userId === room.gameOwnerUserId
-          ? isReady
-            ? <Button onPress={handleStart}>Start game</Button>
-            : <Text>Make sure all give and takes are locked</Text>
-          : <Text>Wait for room owner to start game</Text>
-        }
-      </Center>
-    </VStack>
+    <KeyboardAvoidingView style={{ flex: 1, paddingVertical: 10 }} behavior={'height'} keyboardVerticalOffset={100}>
+      <VStack flex={1}>
+        <Center bg="white" padding={15} rounded={20} width="100%" flex={1} maxHeight={200}>
+          <Text fontSize={18} fontWeight="500" marginBottom={3}>Handicap</Text>
+          <LoadingView isLoading={courseIsLoading}>
+            <GolfArray course={course} />
+          </LoadingView>
+        </Center>
+        <Box flex={1}>
+          <FlatList
+            data={userIds}
+            renderItem={renderItem}
+            keyExtractor={(item) => item} // since the item is the user id itself
+          />
+        </Box>
+        <Center>
+          {userId === room.gameOwnerUserId
+            ? isReady
+              ? <Button onPress={handleStart}>Start game</Button>
+              : <Text>Make sure all give and takes are locked</Text>
+            : <Text>Wait for room owner to start game</Text>}
+        </Center>
+      </VStack>
+    </KeyboardAvoidingView>
   );
 };
 

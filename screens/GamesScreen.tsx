@@ -2,6 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { HomeStackScreenProps } from '../types';
 import { Box, FlatList, Heading, Avatar, HStack, VStack, Stack, AspectRatio, Image, Text, Spacer, Center, Pressable } from 'native-base';
 import gamesData, { GameDataType, GamesDataType } from '../gamesData';
+import { useUser } from '../hooks/useFireGet';
 
 const GamesScreen = ({ navigation }: HomeStackScreenProps<'Games'>) => {
   const handlePress = (itemId: string) => {
@@ -11,6 +12,9 @@ const GamesScreen = ({ navigation }: HomeStackScreenProps<'Games'>) => {
   const data = Object.values(gamesData).sort((a: GameDataType, b: GameDataType) => {
     return a.name < b.name ? -1 : a.name === b.name ? 0 : 1;
   });
+
+  // const [user, userIsLoading] = useUser('Hh5YbkLZuOaSJ60DPN1MWB9MORg2');
+  // const [user2, userIsLoading2] = useUser('Hh5YbkLZuOaSJ60DPN1MWB9MORg2', true);
 
   const renderItem = useCallback(({ item }: { item: GameDataType }) => (
     <Pressable onPress={() => handlePress(item.id)}>

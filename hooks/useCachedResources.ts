@@ -36,8 +36,8 @@ const useCachedResources = () => {
       ]);
 
       const fontAssets = Font.loadAsync({
-        ...FontAwesome.font,
-        'space-mono': require('../assets/fonts/SpaceMono-Regular.ttf'),
+        // ...FontAwesome.font,
+        // 'space-mono': require('../assets/fonts/SpaceMono-Regular.ttf'),
       });
 
       await Promise.all([...imageAssets, fontAssets]);

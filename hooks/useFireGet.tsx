@@ -6,8 +6,8 @@ import { setGolfCourse } from '../redux/features/golfCourses';
 import { addRoom } from '../redux/features/gamesHistory';
 import { setUser } from '../redux/features/users';
 import { formatData } from '../utils/dateUtils';
-import { addIsGettingIds, deleteIsGettingIds } from '../redux/features/info';
-import { useEffectIf } from './common';
+import { useIsMounted } from './common';
+import { Mutex } from 'async-mutex';
 
 type UseFireGetProps<T> = {
   docRef: DocumentReference<DocumentData> | void;
@@ -15,36 +15,64 @@ type UseFireGetProps<T> = {
   itemId: string | void;
   toDispatch: ActionCreatorWithPayload<T, string>;
   textLog: string;
-  dontCall?: boolean;
 };
 
-const useFireGet = <T,>({ docRef, items, itemId, toDispatch, textLog, dontCall }: UseFireGetProps<T>): [T | undefined, boolean] => {
-  // const isGettingIds = useAppSelector(state => state.info.isGettingIds);
+const useFireGet = <T,>({ docRef, items, itemId, toDispatch, textLog }: UseFireGetProps<T>): [T | undefined, boolean] => {
   const [isLoading, setIsLoading] = useState(false);
+  const isMounted = useIsMounted();
   const dispatch = useAppDispatch();
 
-  useEffect(() => {
-    if (itemId && !items[itemId] && !isLoading && !!docRef && !dontCall) {
+  const mutex = itemId ? getMutex(itemId) : null;
+
+  const getData = async () => {
+    if (mutex?.isLocked()) {
       setIsLoading(true);
-      getDoc(docRef)
-        .then(res => {
-          const data = {
-            id: res.id,
-            ...res.data()
-          } as unknown as T;
-          formatData(data);
-          dispatch(toDispatch(data));
-          setIsLoading(false);
-          console.log(`Got ${textLog} data with id ${itemId}`);
-        })
-        .catch(err => {
-          console.log(`Failed to get ${textLog} data with id ${itemId}`);
-          console.error(err);
-        });
+      await mutex?.waitForUnlock();
+      if (!isMounted.current) return;
+      setIsLoading(false);
+    } else {
+      await mutex?.runExclusive(async () => {
+        if (itemId && !items[itemId] && !isLoading && !!docRef) {
+          setIsLoading(true);
+          try {
+            const res = await getDoc(docRef);
+            const data = {
+              id: res.id,
+              ...res.data()
+            } as unknown as T;
+            formatData(data);
+            dispatch(toDispatch(data));
+            console.log(`Got ${textLog} data with id ${itemId}`);
+          } catch (err) {
+            console.log(`Failed to get ${textLog} data with id ${itemId}`);
+            console.error(err);
+          } finally {
+            if (!isMounted.current) return;
+            setIsLoading(false);
+          }
+        }
+      });
     }
-  }, [textLog, itemId, isLoading, docRef]);
+  };
+
+  useEffect(() => {
+    getData();
+    return () => mutex?.cancel();
+  }, [itemId]);
 
   return [itemId && !!docRef ? items[itemId] : undefined, isLoading];
+};
+
+interface Cache {
+  [id: string]: Mutex;
+};
+
+const cache: Cache = {};
+
+const getMutex = (id: string) => {
+  if (!cache[id])
+    cache[id] = new Mutex();
+  return cache[id];
 };
 
 export const useGolfCourse = (golfCourseId: string | void) => {
@@ -71,7 +99,7 @@ export const useRoom = (roomName: string | void) => {
   });
 };
 
-export const useUser = (uid: string | void, dontCall?: boolean) => {
+export const useUser = (uid: string | void) => {
   const db = getFirestore();
   const users = useAppSelector(state => state.users);
   return useFireGet({
@@ -80,9 +108,9 @@ export const useUser = (uid: string | void, dontCall?: boolean) => {
     itemId: uid,
     toDispatch: setUser,
     textLog: 'user',
-    dontCall
   });
 };
+
 
 // export const useUserIds = (userIds: string[] | void) => {
   

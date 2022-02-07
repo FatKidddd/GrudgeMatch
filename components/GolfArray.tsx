@@ -6,21 +6,18 @@ import { sum, getColor, getColorType } from '../utils/golfUtils';
 import { useUser } from '../hooks/useFireGet';
 
 const Tile = ({ num, color }: { num: Stroke | string, color: string }) => {
-  return (
-    <Center width="30" height="30" bg={color}>
-      <Text>{num}</Text>
-    </Center>
-  );
+  return <Center width="30" height="30" bg={color}>{num}</Center>;
 };
 
-interface ArrProps {
+interface RowProps {
   text: string | undefined;
   arr: Array<number | null> | GolfStrokes;
   arrType?: 'Stroke' | 'Bet' | 'Par' | 'Hole' | 'Handicap';
   comparisonArr?: Array<number>;
+  [key: string]: any;
 };
 
-const Row = React.memo(({ text, arr, arrType, comparisonArr }: ArrProps) => {
+const Row = React.memo(({ text, arr, arrType, comparisonArr, ...props }: RowProps) => {
   // console.log(text, arr, arrType, comparisonArr);
   const renderHalf = (half: number[] | Stroke[], compareHalf?: number[]) => {
     return half.map((num, i) => {
@@ -49,7 +46,7 @@ const Row = React.memo(({ text, arr, arrType, comparisonArr }: ArrProps) => {
   const shouldSum = !!sumIfInList.find(e => e === arrType);
 
   return (
-    <HStack>
+    <HStack {...props}>
       <Center width={110} alignItems={"flex-end"} paddingRight={2}>
         <Text numberOfLines={1}>{text}</Text>
       </Center>
@@ -76,6 +73,7 @@ interface UserRowProps {
   strokes: GolfStrokes;
   parArr: Array<number>;
 }
+
 const UserRow = React.memo(({ uid, strokes, parArr }: UserRowProps) => {
   const [user, userIsLoading] = useUser(uid);
   const paddedStrokes = strokes.slice();
@@ -113,18 +111,20 @@ interface UserScoresProps {
   userScores: (0 | -1 | 1 | null)[];
   uid: string;
   oppUid: string;
+  len: number;
 };
 
-const UserScores = React.memo(({ userScores, uid, oppUid }: UserScoresProps) => {
+const UserScores = React.memo(({ userScores, uid, oppUid, len }: UserScoresProps) => {
   const [oppUser, oppUserIsLoading] = useUser(oppUid);
+  const paddedStrokes = userScores.slice();
+  if (len > userScores.length)
+    paddedStrokes.push(...new Array(len - userScores.length).fill(null));
   return (
-    <VStack>
-      <Row
-        text={'You vs ' + oppUser?.name}
-        arr={userScores}
-        arrType='Bet'
-      />
-    </VStack>
+    <Row
+      text={'You vs ' + oppUser?.name}
+      arr={paddedStrokes}
+      arrType='Bet'
+    />
   );
 });
 
@@ -136,20 +136,18 @@ interface GolfArrayProps {
 
 // I've tried so many ways to fix the garbage performance of this, turns out the issue is that rendering new UI will not be memoized lol so when showing and hiding it kills everything
 const GolfArray = React.memo(({ course, children, showCourseInfo=true }: GolfArrayProps) => {
-  console.log('rendered GolfArray');
   if (!course) return null;
+  // console.log('rendered GolfArray');
   const numOfHoles = course.parArr.length;
   return (
     <ScrollView horizontal>
       <VStack>
-        <Box marginBottom={3}>
-          <Row text="Hole" arr={Array.from({ length: numOfHoles }, (_, i) => i + 1)} arrType='Hole' />
-        </Box>
+        <Row text="Hole" arr={Array.from({ length: numOfHoles }, (_, i) => i + 1)} arrType='Hole' marginBottom={3}/>
         {showCourseInfo
-          ? <Box marginBottom={3}>
+          ? <>
             <Row text="Par" arr={course.parArr} arrType='Par' />
-            <Row text="Handicap" arr={course.handicapIndexArr} arrType='Handicap' />
-          </Box>
+            <Row text="Handicap" arr={course.handicapIndexArr} arrType='Handicap' marginBottom={3}/>
+          </>
           : null}
         {children}
       </VStack>

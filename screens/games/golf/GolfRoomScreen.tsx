@@ -70,7 +70,7 @@ const BetRow = ({ userId, oppUid, course, room }: BetRowProps) => {
         }}
       > */}
       <GolfArray course={course} showCourseInfo={false}>
-        <UserScores userScores={finalScores} uid={userId} oppUid={oppUid} />
+        <UserScores userScores={finalScores} uid={userId} oppUid={oppUid} len={course.parArr.length}/>
       </GolfArray>
     </VStack>
   );
@@ -82,9 +82,10 @@ interface TransitionScoreboardProps {
   roomName: string;
   setShowTransitionScoreboard: (bool: boolean) => void;
   golfCourse: GolfCourse | undefined;
+  isMounted: React.MutableRefObject<boolean>;
 };
 
-const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransitionScoreboard, golfCourse }: TransitionScoreboardProps) => {
+const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransitionScoreboard, golfCourse, isMounted }: TransitionScoreboardProps) => {
   if (!userId || !golfCourse) return null;
 
   const db = getFirestore();
@@ -100,6 +101,7 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
       [`usersStrokes.${userId}`]: strokes
     })
       .then(res => {
+        if (!isMounted.current) return;
         setShowTransitionScoreboard(false);
       })
       .catch(err => {
@@ -107,7 +109,9 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
       });
   };
 
-  const sortedUserIds = Object.keys(room.usersStrokes).filter((val) => val != userId).sort();
+  const handleForward = () => setShowTransitionScoreboard(false);
+
+  const sortedUserIds = useMemo(() => Object.keys(room.usersStrokes).filter((val) => val != userId).sort(), [room.usersStrokes]);
   const roomHoleLimit = golfCourse.parArr.length;
 
   return (
@@ -123,7 +127,7 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
         </Center>
         {!room.gameEnded
           ? (1 <= holeNumber && holeNumber <= roomHoleLimit)
-            ? <TouchableOpacity onPress={() => setShowTransitionScoreboard(false)}>
+            ? <TouchableOpacity onPress={handleForward}>
               <Ionicons name="arrow-forward" size={30} />
             </TouchableOpacity>
             : <Box width={30}></Box>
@@ -153,7 +157,6 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
   const [room, setRoom] = useState<GolfGame>();
   const [showTransitionScoreboard, setShowTransitionScoreboard] = useState(false);
   // need to handle connectivity issue, what happens if data received is nothing?
-  const [loading, setLoading] = useState(true);
   const [golfCourse, courseIsLoading] = useGolfCourse(room?.golfCourseId);
   const toast = useToast();
   const isMounted = useIsMounted();
@@ -170,7 +173,6 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
         formatData(data);
         console.log('room screen', data);
         setRoom(data);
-        setLoading(false);
         // handle game end
         if (data.gameEnded) setShowTransitionScoreboard(true);
         if (data.gameEnded && !isSavedView) save();
@@ -181,7 +183,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
 
   // to handle game end
   useEffect(() => {
-    if (!room || room.gameEnded || !golfCourse) return; // to only end game once
+    if (!room || room.gameEnded || !golfCourse || !isMounted.current) return; // to only end game once
     const usersStrokesArr = Object.values(room.usersStrokes);
     if (!usersStrokesArr) return;
     // handle all ended
@@ -244,6 +246,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
 
   const save = () => {
     const handleSaveError = () => {
+      if (!isMounted.current) return;
       toast.show({
         title: 'Room failed to save',
         status: 'error',
@@ -261,6 +264,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
     })
       .then(res => {
         console.log("Room id saved");
+        if (!isMounted.current) return;
         toast.show({
           title: 'Game saved!',
           status: 'success',
@@ -273,7 +277,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
       });
   };
 
-  if (!userId || !room || loading) {
+  if (!userId || !room) {
     return (
       <Center flex={1}>
         <Spinner size="lg" />
@@ -283,7 +287,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
 
   const holeNumber = getUserHoleNumber(room.usersStrokes[userId]);
 
-  const childProps = { room, roomName, golfCourse, userId, holeNumber, setShowTransitionScoreboard };
+  const childProps = { room, roomName, golfCourse, userId, holeNumber, setShowTransitionScoreboard, isMounted };
 
   return (
     <>
@@ -327,9 +331,10 @@ interface InputBoxProps {
   userId: string;
   holeNumber: number;
   setShowTransitionScoreboard: (bool: boolean) => void;
+  isMounted: React.MutableRefObject<boolean>;
 };
 
-const InputBox = ({ room, roomName, golfCourse, userId, holeNumber, setShowTransitionScoreboard }: InputBoxProps) => {
+const InputBox = ({ room, roomName, golfCourse, userId, holeNumber, setShowTransitionScoreboard, isMounted }: InputBoxProps) => {
   const [inputVal, setInputVal] = useState(1);
   const [inputLoading, setInputLoading] = useState(false);
   const updateUserStrokes = () => {
@@ -340,10 +345,12 @@ const InputBox = ({ room, roomName, golfCourse, userId, holeNumber, setShowTrans
     // because index starts with 0
     strokes[holeNumber - 1] = inputVal;
     setInputLoading(true);
+
     updateDoc(roomRef, {
       [`usersStrokes.${userId}`]: strokes
     })
       .then(res => {
+        if (!isMounted.current) return;
         setShowTransitionScoreboard(true);
       })
       .catch(err => {

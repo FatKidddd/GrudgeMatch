@@ -18,7 +18,7 @@ import { initializeApp } from "firebase/app";
 // import { getReactNativePersistence } from 'firebase/auth/react-native';
 
 import { SSRProvider } from '@react-aria/ssr';
-
+import { initializeFirestore } from "firebase/firestore"; 
 
 const firebaseConfig = {
   apiKey: "AIzaSyArYG40JyZ01TC1fC464x-VJ9_j2_5Bjl4",
@@ -32,6 +32,16 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+initializeFirestore(app, {
+  // @ts-ignore
+  useFetchStreams: false,
+  cacheSizeBytes: 100000000,
+  experimentalForceLongPolling: true
+});
+// enableIndexedDbPersistence(getFirestore())
+//   .catch((err) => {
+//     console.error(err);
+//   });
 
 // Provide it to initializeAuth.
 // const auth = initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });

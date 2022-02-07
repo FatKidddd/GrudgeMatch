@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Text, Heading, VStack, FormControl, Input, Link, Button, HStack, Center, useToast, Image, Spinner } from "native-base";
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import { ResponseType } from 'expo-auth-session';
+import * as Google from 'expo-auth-session/providers/google';
 import { GoogleAuthProvider, onAuthStateChanged, signInWithCredential, getAuth, createUserWithEmailAndPassword, updateProfile, User, signInWithEmailAndPassword } from 'firebase/auth';
-import * as Google from 'expo-google-app-auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { TouchableOpacity } from 'react-native';
 import { GoogleSvg } from '../components';
 
-const IOS_CLIENT_ID = "446448293024-9u0b4sak30e4deqj5eaaan3og5ancs9j.apps.googleusercontent.com";
-const ANDROID_CLIENT_ID = "446448293024-dqp1c1vjankcc1fqhh6t8j1f2omak51h.apps.googleusercontent.com";
-
+WebBrowser.maybeCompleteAuthSession();
 // both login and registration
 const AuthScreen = () => {
   const [email, setEmail] = useState('');
@@ -51,88 +51,64 @@ const AuthScreen = () => {
     });
   };
 
-  const onSignIn = (googleUser: any) => {
-    console.log('Google Auth Response', googleUser);
-    // We need to register an Observer on Firebase Auth to make sure auth is initialized.
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      unsubscribe();
-      // Check if we are already signed-in Firebase with the correct user.
-      if (!isUserEqual(googleUser, firebaseUser)) {
-        // Build Firebase credential with the Google ID token.
-        let credential = GoogleAuthProvider.credential(googleUser.idToken, googleUser.accessToken);
-        // Sign in with credential from the Google user.
-        signInWithCredential(auth, credential)
-          .then((result) => {
-            console.log('User signed in');
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    expoClientId: "446448293024-5q6t25pt7mc7p4to2rk1uvd7fci1tm5v.apps.googleusercontent.com",
+    iosClientId: "446448293024-9u0b4sak30e4deqj5eaaan3og5ancs9j.apps.googleusercontent.com",
+    androidClientId: "446448293024-61rd8brl910re64ei65q5q8vmrbe3du8.apps.googleusercontent.com"
+    //"446448293024-dqp1c1vjankcc1fqhh6t8j1f2omak51h.apps.googleusercontent.com",
+    // webClientId: 'GOOGLE_GUID.apps.googleusercontent.com',
+  });
 
-            const userRef = doc(db, 'users', result.user.uid);
-            getDoc(userRef)
-              .then(res => {
-                if (!res.exists()) {
-                  setDoc(userRef, {
-                    name: result.user.displayName,
-                    roomNames: {}
-                  });
-                }
-              });
-          })
-          .catch(error => {
-            // Handle Errors here.
-            let errorCode = error.code;
-            let errorMessage = error.message;
-            // The email of the user's account used.
-            let email = error.email;
-            // The firebase.auth.AuthCredential type that was used.
-            let credential = error.credential;
-            // ...
-            handleFailed('Sign in with Google was unsuccessful.');
-            console.error(error);
-          });
-      } else {
-        console.log('User already signed-in Firebase.');
-      }
-    });
-  };
+  useEffect(() => {
+    if (response?.type === 'success') {
+      // console.log(response)
+      // const { authentication } = response;
+      // const id_token = authentication?.idToken;
+      // console.log(id_token)
+      // onSignIn(response);
+      const { id_token } = response.params;
+      
+      const auth = getAuth();
+      const credential = GoogleAuthProvider.credential(id_token);
+      signInWithCredential(auth, credential)
+        .then((result) => {
+          console.log('User signed in');
 
-  const isUserEqual = (googleUser: any, firebaseUser: User | null) => {
-    if (firebaseUser) {
-      let providerData = firebaseUser.providerData;
-      for (let i = 0; i < providerData.length; i++) {
-        if (providerData[i].providerId === GoogleAuthProvider.PROVIDER_ID &&
-          providerData[i].uid === googleUser.getBasicProfile().getId()) {
-          // We don't need to reauth the Firebase connection.
-          return true;
-        }
-      }
+          const userRef = doc(db, 'users', result.user.uid);
+          getDoc(userRef)
+            .then(res => {
+              if (!res.exists()) {
+                setDoc(userRef, {
+                  name: result.user.displayName,
+                  roomNames: {}
+                });
+              }
+            });
+        })
+        .catch(error => {
+          // Handle Errors here.
+          let errorCode = error.code;
+          let errorMessage = error.message;
+          // The email of the user's account used.
+          let email = error.email;
+          // The firebase.auth.AuthCredential type that was used.
+          let credential = error.credential;
+          // ...
+          handleFailed('Sign in with Google was unsuccessful.');
+          console.error(error);
+        });
+    } else {
+      setIsLoading(false);
+      if (response !== null)
+        handleFailed('Sign in with Google was unsuccessful.');
     }
-    return false;
-  };
+  }, [response]);
 
-  const signInWithGoogleAsync = async () => {
+  const signInWithGoogle = () => {
     if (isLoading) return;
     setIsLoading(true);
-    try {
-      const result = await Google.logInAsync({
-        behavior: 'web',
-        androidClientId: ANDROID_CLIENT_ID,
-        iosClientId: IOS_CLIENT_ID,
-        scopes: ['profile', 'email'],
-      });
-
-      if (result.type === 'success') {
-        onSignIn(result);
-        return result.accessToken;
-      } else {
-        setIsLoading(false);
-        return { cancelled: true };
-      }
-    } catch (e) {
-      setIsLoading(false);
-      handleFailed('Sign in with Google was unsuccessful.');
-      return { error: true };
-    }
-  }
+    promptAsync();
+  };
 
   const handleSignUp = () => {
     setIsLoading(true);
@@ -239,9 +215,11 @@ const AuthScreen = () => {
               </Button>}
             <HStack justifyContent={'space-between'} alignItems={'center'} marginTop={3}>
               <Text>Sign in with Google</Text>
-              <TouchableOpacity onPress={signInWithGoogleAsync}>
-                <GoogleSvg />
-              </TouchableOpacity>
+              {isLoading
+                ? <Spinner size="lg" />
+                : <TouchableOpacity onPress={signInWithGoogle}>
+                  <GoogleSvg />
+                </TouchableOpacity>}
             </HStack>
             <HStack mt="6" justifyContent="center">
               <Link

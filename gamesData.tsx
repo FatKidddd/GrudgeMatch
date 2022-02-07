@@ -12,7 +12,7 @@ const gamesData: GamesDataType = {
   golf: {
     id: "golf",
     name: "Golf",
-    imagePath: require("./assets/images/games/golf_bg2.png")
+    imagePath: require("./assets/images/games/golf_bg.png")
   },
 };
 
