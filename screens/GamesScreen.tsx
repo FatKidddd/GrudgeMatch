@@ -1,8 +1,7 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import { HomeStackScreenProps } from '../types';
-import { Box, FlatList, Heading, Avatar, HStack, VStack, Stack, AspectRatio, Image, Text, Spacer, Center, Pressable } from 'native-base';
+import { Box, FlatList, Heading, HStack, Image, Pressable, Text } from 'native-base';
 import gamesData, { GameDataType, GamesDataType } from '../gamesData';
-import { useUser } from '../hooks/useFireGet';
 
 const GamesScreen = ({ navigation }: HomeStackScreenProps<'Games'>) => {
   const handlePress = (itemId: string) => {
@@ -56,8 +55,46 @@ const GamesScreen = ({ navigation }: HomeStackScreenProps<'Games'>) => {
     </Pressable>
   ), []);
 
+  // const ddata = [
+  //   {
+  //     text: 1
+  //   },
+  //   {
+  //     text: 2
+  //   },
+  //   {
+  //     text: 3
+  //   },
+  //   {
+  //     text: 4
+  //   },
+  //   {
+  //     text: 5
+  //   },
+  //   {
+  //     text: 6
+  //   },
+  //   {
+  //     text: 7
+  //   },
+  //   {
+  //     text: 8
+  //   },
+  // ];
+
   return (
     <Box width='100%' flex={1}>
+      {/* <FlatList
+        contentContainerStyle={{ alignSelf: 'flex-start' }}
+        numColumns={3}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        data={ddata}
+        renderItem={({ item, index }) => {
+            //push your code
+          return <Text>{item.text}</Text>;
+        }}
+      /> */}
       <FlatList
         data={data}
         renderItem={renderItem}

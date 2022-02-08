@@ -6,8 +6,6 @@ import { NativeBaseProvider, extendTheme } from "native-base";
 import useCachedResources from './hooks/useCachedResources';
 import Navigation from './navigation';
 // Import the functions you need from the SDKs you need
-// import * as Application from 'expo-application';
-// import Constants from 'expo-constants';
 import { StatusBar, LogBox } from 'react-native';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
 

@@ -58,7 +58,7 @@ const useFireGet = <T,>({ docRef, items, itemId, toDispatch, textLog }: UseFireG
   useEffect(() => {
     getData();
     return () => mutex?.cancel();
-  }, [itemId]);
+  }, [itemId, items]);
 
   return [itemId && !!docRef ? items[itemId] : undefined, isLoading];
 };

@@ -1,7 +1,7 @@
 import RoomDetails from "./RoomDetails";
 import UserAvatar from "./UserAvatar";
 import UsersBar from "./UsersBar";
-import { GolfArray, UsersStrokes, UserScores, getColor, getColorType } from "./GolfArray";
+import { GolfArray, getUserRowData, useUsersRowData, useUserScoresData } from "./GolfArray";
 import ConfirmModal from "./ConfirmModal";
 import BackButton from "./BackButton";
 import Header from "./Header";
@@ -22,10 +22,9 @@ export {
   UserAvatar,
   UsersBar,
   GolfArray,
-  UsersStrokes,
-  UserScores,
-  getColor,
-  getColorType,
+  getUserRowData,
+  useUsersRowData,
+  useUserScoresData,
   ConfirmModal,
   BackButton,
   Header,

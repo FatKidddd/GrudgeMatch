@@ -19,6 +19,7 @@ interface CourseViewProps {
 }
 
 const CourseView = React.memo(({ golfCourseId, setSelectedCourseId, isSelected }: CourseViewProps) => {
+  console.log('render courseview')
   const [golfCourse, golfCourseIsLoading] = useGolfCourse(golfCourseId);
   if (!golfCourse) return null;
   const handleOnPress = () => setSelectedCourseId(isSelected ? '' : golfCourse.id);
@@ -141,13 +142,13 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
 
   const renderFooter = () => loading ? <Spinner size="lg" /> : null;
 
-  const renderItem = ({ item: golfCourseId }: { item: string }) => (
+  const renderItem = useCallback(({ item: golfCourseId }: { item: string }) => (
     <CourseView
       golfCourseId={golfCourseId}
       setSelectedCourseId={setSelectedCourseId}
       isSelected={selectedCourseId === golfCourseId}
     />
-  );
+  ), [selectedCourseId]);
 
   return (
     <>
@@ -162,7 +163,7 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
               renderItem={renderItem}
               keyExtractor={(item, i) => item + i}
               onEndReached={onEndReached}
-              onEndReachedThreshold={0.7}
+              onEndReachedThreshold={0.5}
               initialNumToRender={3}
               ListFooterComponent={renderFooter}
               removeClippedSubviews={true}
@@ -204,7 +205,7 @@ const HandicapRow = ({ userId, oppUid, room, roomName }: HandicapRowProps) => {
       locked: false
     };
 
-  console.log(handicapInfo)
+  // console.log(handicapInfo)
 
   useEffect(() => {
     setFrontVal(Number(handicapInfo.frontCount));
@@ -243,6 +244,7 @@ const HandicapRow = ({ userId, oppUid, room, roomName }: HandicapRowProps) => {
   };
 
   const handleLock = async () => {
+    if (room.gameEnded) return;
     await updateDoc(roomRef, {
       [`pointsArr.${pairId}.locked`]: !handicapInfo.locked
     });
@@ -258,7 +260,7 @@ const HandicapRow = ({ userId, oppUid, room, roomName }: HandicapRowProps) => {
           value={val ? val.toString() : undefined}
           onChangeText={text => handleInputChange(frontOrBackCount, text)}
           onEndEditing={() => handleInputSubmit(frontOrBackCount)}
-          editable={!handicapInfo.locked}
+          // editable={!handicapInfo.locked}
           flex={1}
           fontSize={20}
           rounded={10}
@@ -280,7 +282,7 @@ const HandicapRow = ({ userId, oppUid, room, roomName }: HandicapRowProps) => {
             : <TouchableOpacity onPress={handleGiveOrTake} disabled={handicapInfo.locked}>
               <Fontisto name='spinner-rotate-forward' size={25} />
             </TouchableOpacity>}
-          <TouchableOpacity onPress={handleLock}>
+          <TouchableOpacity onPress={handleLock} disabled={Boolean(room.gameEnded)}>
             <Ionicons name={handicapInfo.locked ? "md-lock-closed" : "md-lock-open-outline"} size={30} />
           </TouchableOpacity>
         </HStack>
@@ -351,30 +353,38 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
 
   const userIds = useMemo(() => room.userIds.filter(uid => uid != userId), [room.userIds]);
 
+  const renderHeader = () => {
+    return (
+      <Center bg="white" padding={15} rounded={20} width="100%" flex={1} key='handicapHeader'>
+        <Text fontSize={18} fontWeight="500">Handicap</Text>
+        <LoadingView isLoading={courseIsLoading}>
+          <GolfArray course={course} />
+        </LoadingView>
+      </Center>
+    );
+  };
+
+  const renderFooter = () => {
+    return (
+      <Center key='handicapFooter'>
+        {userId === room.gameOwnerUserId
+          ? isReady
+            ? <Button onPress={handleStart}>Start game</Button>
+            : <Text>Make sure all give and takes are locked</Text>
+          : <Text>Wait for room owner to start game</Text>}
+      </Center>
+    );
+  };
+
   return (
-    <KeyboardAvoidingView style={{ flex: 1, paddingVertical: 10 }} behavior={'height'} keyboardVerticalOffset={100}>
-      <VStack flex={1}>
-        <Center bg="white" padding={15} rounded={20} width="100%" flex={1} maxHeight={200}>
-          <Text fontSize={18} fontWeight="500" marginBottom={3}>Handicap</Text>
-          <LoadingView isLoading={courseIsLoading}>
-            <GolfArray course={course} />
-          </LoadingView>
-        </Center>
-        <Box flex={1}>
-          <FlatList
-            data={userIds}
-            renderItem={renderItem}
-            keyExtractor={(item) => item} // since the item is the user id itself
-          />
-        </Box>
-        <Center>
-          {userId === room.gameOwnerUserId
-            ? isReady
-              ? <Button onPress={handleStart}>Start game</Button>
-              : <Text>Make sure all give and takes are locked</Text>
-            : <Text>Wait for room owner to start game</Text>}
-        </Center>
-      </VStack>
+    <KeyboardAvoidingView style={{ flex: 1, paddingVertical: 10 }} behavior={'height'} keyboardVerticalOffset={200}>
+      <FlatList
+        data={userIds}
+        renderItem={renderItem}
+        keyExtractor={(item) => item} // since the item is the user id itself
+        ListHeaderComponent={renderHeader()}
+        ListFooterComponent={renderFooter()}
+      />
     </KeyboardAvoidingView>
   );
 };

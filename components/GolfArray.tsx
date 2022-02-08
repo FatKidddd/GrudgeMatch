@@ -1,68 +1,34 @@
-import _, { uniqueId } from 'lodash';
+import _ from 'lodash';
 import React, { useCallback, useMemo } from 'react';
 import { HStack, Center, Text, Box, ScrollView, VStack, Spinner, FlatList } from 'native-base';
 import { GolfCourse, GolfStrokes, Stroke } from '../types';
-import { sum, getColor, getColorType } from '../utils/golfUtils';
+import { getColor, getColorType } from '../utils/golfUtils';
 import { useUser } from '../hooks/useFireGet';
+import { useAppSelector } from '../hooks/selectorAndDispatch';
 
 interface TileProps {
   num: Stroke | string;
   color: string;
-  [key: string]: any;
+  style?: {
+    [key: string]: any;
+  };
 };
 
-const Tile = React.memo(({ num, color, ...props }: TileProps) => {
-  return <Box width="30" height="30" bg={color} justifyContent='center' alignItems={'center'} {...props}>{num}</Box>;
+const Tile = React.memo(({ num, color, style }: TileProps) => {
+  return <Box width="30" height="30" bg={color} justifyContent='center' alignItems={'center'} style={style}>{num}</Box>;
 });
 
 type ArrType = 'Stroke' | 'Bet' | 'Par' | 'Hole' | 'Handicap';
 
-// interface HalfProps {
-//   half: number[] | Stroke[];
-//   compareHalf?: number[];
-//   arrType?: ArrType;
-// };
-
-// const Half = React.memo(({ half, compareHalf, arrType }: HalfProps) => {
-//   console.log('rendered half');
-//   return (
-//     <>
-//       {half.map((num, i) => {
-//         const compareNumber = compareHalf ? compareHalf[i] : undefined;
-//         const colorType = getColorType({ num, arrType, compareNumber });
-//         return <Tile key={i} num={num} color={getColor(colorType)} />;
-//       })}
-//     </>
-//   );
-// });
-
-// interface SumTileProps {
-//   shouldSum: boolean;
-//   givenArr: number[] | Stroke[];
-//   givenCompareArr?: number[] | Stroke[];
-//   arrType?: ArrType;
-//   [key: string]: any;
-// };
-
-// const SumTile = React.memo(({ shouldSum, givenArr, givenCompareArr, arrType, ...props }: SumTileProps) => {
-//   const summation = shouldSum ? sum(givenArr) : null;
-//   const colorType = getColorType({
-//     num: summation,
-//     arrType,
-//     compareNumber: givenCompareArr ? sum(givenCompareArr) : undefined
-//   });
-//   return <Tile num={summation} color={getColor(colorType)} {...props} />;
-// });
-
-interface RowProps {
-  text: string | undefined;
+interface FormatRowToTileDataProps {
+  text?: string | null;
   arr: Array<number | null> | GolfStrokes;
   arrType?: ArrType;
   comparisonArr?: Array<number | null>;
-  [key: string]: any;
+  style?: {
+    [key: string]: any;
+  };
 };
-
-const sumIfInList = ['Stroke', 'Bet', 'Par'];
 
 const sumFrom = (arr: (number | null | undefined)[] | undefined, idx1: number, idx2: number) => {
   let res = 0;
@@ -73,74 +39,82 @@ const sumFrom = (arr: (number | null | undefined)[] | undefined, idx1: number, i
   return res;
 };
 
-const Row = React.memo(({ text, arr, arrType, comparisonArr, ...props }: RowProps) => {
+const formatRowToTileData = ({ text, arr, arrType, comparisonArr, style }: FormatRowToTileDataProps) => {
+  const sumIfInList = ['Stroke', 'Bet', 'Par'];
   const shouldSum = !!sumIfInList.find(e => e === arrType);
   const sumArr = [sumFrom(arr, 0, 9), sumFrom(arr, 9, 18)];
   const sumArrTotal = sumArr[0] + sumArr[1];
   const sumComparisonArr = [sumFrom(comparisonArr, 0, 9), sumFrom(comparisonArr, 9, 18)];
   const sumComparisonArrTotal = sumComparisonArr[0] + sumComparisonArr[1];
 
-  const body = useMemo(() => {
-    // console.log('rendered body');
-    const res: JSX.Element[] = [];
-    arr.forEach((num, i) => {
-      const compareNumber = comparisonArr ? comparisonArr[i] : undefined;
-      const colorType = getColorType({ num, arrType, compareNumber });
-      res.push(<Tile key={i} num={num} color={getColor(colorType)} />);
-      if ((i + 1) % 9 === 0) {
-        res.push(
-          <Tile
-            key={'sum' + i}
-            num={shouldSum ? sumArr[(i + 1) / 9 - 1] : null}
-            color={getColor(getColorType({
-              num: shouldSum ? sumArr[(i + 1) / 9 - 1] : null,
-              arrType,
-              compareNumber: shouldSum ? sumComparisonArr[(i + 1) / 9 - 1] : undefined
-            }))}
-            marginX={3}
-          />
-        )
-      }
+  const res = [];
+  arr.forEach((num, i) => {
+    // tile data
+    res.push({
+      num,
+      color: getColor(getColorType({
+        num,
+        arrType,
+        compareNumber: comparisonArr ? comparisonArr[i] : undefined
+      })),
+      style
     });
-    return res;
-  }, [arr, comparisonArr]);
 
-  return (
-    <HStack {...props}>
-      <Text numberOfLines={1} width={110} textAlign='right' paddingRight={2}>{text}</Text>
-      {body}
-      <Tile
-        num={shouldSum ? sumArrTotal : null}
-        color={getColor(getColorType({
-          num: shouldSum ? sumArrTotal : null,
+    // subtotal sum tile
+    if ((i + 1) % 9 === 0) { 
+      res.push({
+        num: shouldSum ? sumArr[(i + 1) / 9 - 1] : null,
+        color: getColor(getColorType({
+          num: shouldSum ? sumArr[(i + 1) / 9 - 1] : null,
           arrType,
-          compareNumber: shouldSum ? sumComparisonArrTotal : undefined
-        }))}
-      />
-    </HStack>
-  );
-});
+          compareNumber: shouldSum ? sumComparisonArr[(i + 1) / 9 - 1] : undefined
+        })),
+        style: {
+          ...style,
+          marginHorizontal: 10
+        }
+      });
+    }
+  });
+
+  // total sum tile
+  res.push({
+    num: shouldSum ? sumArrTotal : null,
+    color: getColor(getColorType({
+      num: shouldSum ? sumArrTotal : null,
+      arrType,
+      compareNumber: shouldSum ? sumComparisonArrTotal : undefined
+    })),
+    style: {
+      ...style,
+      marginHorizontal: 10
+    }
+  });
+
+  return res;
+};
+
+const padArr = (arr: any[], finalLen: number) => {
+  const len = arr.length;
+  if (finalLen <= len) return arr;
+  return [...arr.slice(), ...new Array(finalLen - len).fill(null)];
+};
 
 interface UserRowProps {
-  uid: string;
+  userName?: string;
   strokes: GolfStrokes;
   parArr: Array<number>;
 }
 
-const UserRow = React.memo(({ uid, strokes, parArr }: UserRowProps) => {
-  const [user, userIsLoading] = useUser(uid);
-  const paddedStrokes = strokes.slice();
-  if (parArr.length > strokes.length)
-    paddedStrokes.push(...new Array(parArr.length - strokes.length).fill(null));
-  return (
-    <Row
-      text={user?.name}
-      arr={paddedStrokes}
-      arrType='Stroke'
-      comparisonArr={parArr}
-    />
-  );
-});
+const getUserRowData = ({ userName, strokes, parArr }: UserRowProps): FormatRowToTileDataProps => {
+  const paddedStrokes = padArr(strokes, parArr.length);
+  return {
+    text: userName,
+    arr: paddedStrokes,
+    arrType: 'Stroke',
+    comparisonArr: parArr
+  };
+};
 
 interface UsersStrokesProps {
   usersStrokes: {
@@ -149,69 +123,140 @@ interface UsersStrokesProps {
   course: GolfCourse | undefined;
 };
 
-const UsersStrokes = React.memo(({ usersStrokes, course }: UsersStrokesProps) => {
-  if (!course) return null;
+const useUsersRowData = ({ usersStrokes, course }: UsersStrokesProps): FormatRowToTileDataProps[] => {
+  const users = useAppSelector(state => state.users);
   const sortedStrokes = Object.entries(usersStrokes).sort();
-  const renderItem = useCallback(([uid, strokes], i) =>
-    <UserRow key={uid} uid={uid} strokes={strokes} parArr={course.parArr} />
-  , []);
-  return <>{sortedStrokes.map(renderItem)}</>;
-});
+  if (!course || !sortedStrokes.every(([uid, _]) => Boolean(users[uid]))) return [];
+  return sortedStrokes.map(([uid, strokes], i) => getUserRowData({
+    userName: users[uid]?.name,
+    strokes,
+    parArr: course.parArr
+  }));
+};
 
 interface UserScoresProps {
   userScores: (0 | -1 | 1 | null)[];
-  uid: string;
   oppUid: string;
   len: number;
 };
 
-const UserScores = React.memo(({ userScores, uid, oppUid, len }: UserScoresProps) => {
+const useUserScoresData = ({ userScores, oppUid, len }: UserScoresProps): FormatRowToTileDataProps[] => {
   const [oppUser, oppUserIsLoading] = useUser(oppUid);
-  const paddedStrokes = userScores.slice();
-  if (len > userScores.length)
-    paddedStrokes.push(...new Array(len - userScores.length).fill(null));
-  return (
-    <Row
-      text={'You vs ' + oppUser?.name}
-      arr={paddedStrokes}
-      arrType='Bet'
-    />
-  );
-});
+  const paddedStrokes = padArr(userScores, len);
+  return [{ 
+    text: 'You vs ' + oppUser?.name,
+    arr: paddedStrokes,
+    arrType: 'Bet'
+  }];
+};
 
 interface GolfArrayProps {
   course: GolfCourse | undefined;
-  children?: React.ReactNode;
   showCourseInfo?: boolean;
+  extraData?: FormatRowToTileDataProps[];
 };
 
 // I've tried so many ways to fix the garbage performance of this, turns out the issue is that rendering new UI will not be memoized lol so when showing and hiding it kills everything
-const GolfArray = React.memo(({ course, children, showCourseInfo=true }: GolfArrayProps) => {
-  if (!course) return null;
-  // console.log('rendered GolfArray');
-  const numOfHoles = course.parArr.length;
-  const holes = Array.from({ length: numOfHoles }, (_, i) => i + 1);
-  return (
-    <ScrollView horizontal>
-      {/* <FlatList
-        data={Array.from({ length: 200 }, (_, i) => i + 1)}
-        renderItem={({ item }) => <Text>{item}</Text>}
-        keyExtractor={(item) => item}
-        horizontal={true}
-        scrollEnabled={false}
-      /> */}
-      <VStack>
-        <Row text="Hole" arr={holes} arrType='Hole' marginBottom={3}/>
-        {showCourseInfo
-          ? <>
-            <Row text="Par" arr={course.parArr} arrType='Par' />
-            <Row text="Handicap" arr={course.handicapIndexArr} arrType='Handicap' marginBottom={3}/>
-          </>
-          : null}
-        {children}
-      </VStack>
-    </ScrollView>
-  );
+// rewrote the whole thing to use flatlist but still not improvement
+interface Label {
+  text: (string | null | undefined);
+  style?: {
+    [key: string]: any;
+  };
+};
+
+const Label = React.memo(({ text, style }: Label) => {
+  return <Text numberOfLines={1} width={110} height={30} textAlign='right' paddingRight={2} style={style}>{text}</Text>
 });
 
-export { GolfArray, UsersStrokes, UserScores, getColor, getColorType };
+const GolfArray = React.memo(({ course, showCourseInfo=true, extraData }: GolfArrayProps) => {
+  if (!course) return null;
+  console.log('rendered GolfArray');
+  const numOfHoles = course.parArr.length;
+  const holes = Array.from({ length: numOfHoles }, (_, i) => i + 1);
+
+  const labels: Label[] = [];
+  const body: TileProps[] = [];
+
+  const allocateData = (data: FormatRowToTileDataProps) => {
+    const { text, style, ...withoutText } = data;
+    labels.push({ text, style });
+    const rowData = formatRowToTileData({ ...withoutText, style });
+    body.push(...rowData);
+  };
+  
+  const res: FormatRowToTileDataProps[] = [
+    {
+      text: 'Hole',
+      arr: holes,
+      arrType: 'Hole',
+      style: {
+        marginBottom: 10
+      }
+    },
+    {
+      text: 'Par',
+      arr: course.parArr,
+      arrType: 'Par',
+    },
+    {
+      text: 'Handicap',
+      arr: course.handicapIndexArr,
+      arrType: 'Handicap',
+      style: {
+        marginBottom: 10
+      }
+    },
+  ];
+
+  allocateData(res[0]);
+
+  if (showCourseInfo) {
+    allocateData(res[1]);
+    allocateData(res[2]);
+  }
+
+  extraData?.forEach((val, idx) => {
+    allocateData(val);
+  });
+
+  const renderLabel = useCallback(({ item }: { item: Label }) => <Label {...item} />, []);
+
+  const renderBody = useCallback(({ item }: { item: TileProps }) => <Tile {...item} />, []);
+
+  return null;
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
+      horizontal
+      removeClippedSubviews={true}
+      flex={1}
+    >
+      <FlatList
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        data={labels}
+        renderItem={renderLabel}
+        keyExtractor={(item, idx) => 'labels' + course.id + idx.toString()}
+        scrollEnabled={false}
+        listKey={'labels' + course.id}
+      />
+      <FlatList
+        contentContainerStyle={{ alignSelf: 'flex-start' }}
+        numColumns={numOfHoles + Math.floor(numOfHoles / 9) + 1} // flex-wrap
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        data={body}
+        renderItem={renderBody}
+        keyExtractor={(item, idx) => 'body' + course.id + idx.toString()}
+        scrollEnabled={false}
+        listKey={'body' + course.id}
+      />
+    </ScrollView>
+  );
+}, (prevProps, nextProps) => {
+  return prevProps.course?.id === nextProps.course?.id && prevProps.extraData === nextProps.extraData && prevProps.showCourseInfo === nextProps.showCourseInfo;
+});
+
+export { GolfArray, getUserRowData, useUsersRowData, useUserScoresData };

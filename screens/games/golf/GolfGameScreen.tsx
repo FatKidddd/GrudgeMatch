@@ -373,7 +373,7 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
               <Text textAlign={'center'}>You haven't played any golf games yet, click the plus icon to get started!</Text>
             </Center>
           </Center>
-          : <Box marginTop={3}>
+          : <Box marginTop={3} flex={1}>
             <FlatList
               data={savedRooms}
               renderItem={renderItem}

@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Icon, Text, ScrollView, Center, Button, Avatar, HStack, Switch, useColorMode, Spinner } from 'native-base';
+import { Icon, Text, ScrollView, Center, Button, HStack, Switch, useColorMode, Spinner } from 'native-base';
 import { RootDrawerScreenProps } from '../types';
 import * as ImagePicker from "expo-image-picker";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject,  } from "firebase/storage";
 import { LogBox, Platform } from "react-native";
-import uuid from "react-native-uuid";
+// import uuid from "react-native-uuid";
 import { getAuth } from 'firebase/auth';
 import { updateDoc, getFirestore, doc, deleteField } from 'firebase/firestore';
 // import BoringAvatar from 'react-native-boring-avatars';
-import { getInitials } from '../utils/userUtils';
+// import { getInitials } from '../utils/userUtils';
+import { useIsMounted } from '../hooks/common';
 import { useUser } from '../hooks/useFireGet';
 import { useAppDispatch } from '../hooks/selectorAndDispatch';
 import { ConfirmModal, UserAvatar } from '../components';
-import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { deleteUser } from '../redux/features/users';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
@@ -22,6 +23,7 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
 
   const uid = getAuth().currentUser?.uid;
   const [user, userIsLoading] = useUser(uid);
+  const isMounted = useIsMounted();
   const dispatch = useAppDispatch();
 
   // Firebase sets some timers for a long period, which will trigger some warnings. Let's turn that off for 
@@ -104,6 +106,8 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
       .then(res => {
         console.log("Deleted profile picture of user", user.id);
         dispatch(deleteUser(user.id));
+        if (!isMounted.current) return;
+        setDeleteIsOpen(false);
       })
       .catch(err => {
         console.log("Something went wrong with deleting profile picture");
@@ -147,6 +151,7 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
       console.log(e);
       alert("Upload failed, sorry :(");
     } finally {
+      if (!isMounted.current) return;
       setUploading(false);
     }
   };

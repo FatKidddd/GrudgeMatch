@@ -8,7 +8,7 @@ import { getAuth } from 'firebase/auth';
 import { GolfCourse, GolfGame, HomeStackParamList } from '../../../types';
 import GolfPrepScreen from './GolfPrepScreen';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { BackButton, GolfArray, RoomDetails, UsersBar, UserAvatar, UserScores, UsersStrokes, Header, LoadingView } from '../../../components';
+import { BackButton, GolfArray, RoomDetails, UsersBar, UserAvatar, Header, LoadingView, useUserScoresData, useUsersRowData } from '../../../components';
 import { getBetScores, getColor, getColorType, getUserHoleNumber } from '../../../utils/golfUtils';
 import { tryAsync } from '../../../utils/asyncUtils';
 import { useGolfCourse, useUser } from '../../../hooks/useFireGet';
@@ -26,16 +26,15 @@ const BetRow = React.memo(({ userId, oppUid, course, room }: BetRowProps) => {
   const [showDetail, setShowDetail] = useState(false);
   const [user, userIsLoading] = useUser(userId);
   const [oppUser, oppUserIsLoading] = useUser(oppUid);
-
   const { finalScore, finalScores } = getBetScores({ userId, oppUid, course, room });
+  const userScoresData = useUserScoresData({
+    userScores: finalScores,
+    oppUid,
+    len: course.parArr.length
+  });
 
   return (
     <VStack width='100%' borderWidth={2} borderColor={'gray.100'} rounded={20} padding={3} marginTop={3}>
-      {/* <Center width='100%' alignItems='flex-end'>
-        <TouchableOpacity onPress={() => setShowDetail(!showDetail)}>
-          <MaterialIcons name={`expand-${!showDetail ? 'more' : 'less'}`} size={30} />
-        </TouchableOpacity>
-      </Center> */}
       <HStack marginBottom={5} justifyContent={'space-evenly'}>
         <HStack alignItems={'center'}>
           <Center width={70}>
@@ -55,23 +54,11 @@ const BetRow = React.memo(({ userId, oppUid, course, room }: BetRowProps) => {
           </Center>
         </Center>
       </HStack>
-      {/* <PresenceTransition
-        visible={showDetail}
-        initial={{
-          opacity: 0,
-          scale: 0,
-        }}
-        animate={{
-          opacity: 1,
-          scale: 1,
-          transition: {
-            duration: 250,
-          },
-        }}
-      > */}
-      <GolfArray course={course} showCourseInfo={false}>
-        <UserScores userScores={finalScores} uid={userId} oppUid={oppUid} len={course.parArr.length}/>
-      </GolfArray>
+      <GolfArray
+        course={course}
+        showCourseInfo={false}
+        extraData={userScoresData}
+      />
     </VStack>
   );
 });
@@ -163,6 +150,12 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
   const [golfCourse, courseIsLoading] = useGolfCourse(room?.golfCourseId);
   const toast = useToast();
   const isMounted = useIsMounted();
+  const [showHandicap, setShowHandicap] = useState(false);
+
+  const usersRowData = useUsersRowData({
+    usersStrokes: room?.usersStrokes ? room.usersStrokes : {},
+    course: golfCourse
+  });
 
   // to get room
   useEffect(() => {
@@ -233,6 +226,9 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
       return (
         <HStack alignItems="center" justifyContent="space-between" shadow={1} marginX={3} marginY={2}>
           <UsersBar userIds={room.userIds} />
+          <TouchableOpacity onPress={() => setShowHandicap(!showHandicap)}>
+            <MaterialIcons name='info-outline' size={30} style={{ marginLeft: 5 }} />
+          </TouchableOpacity>
         </HStack>
       );
     }
@@ -297,7 +293,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
       {roomHeader}
       <Box flex={1} width="100%" paddingX={15}>
         {/* check that room has a golf course and that all handicap between pairs has been chosen */}
-        {room.golfCourseId && room.prepDone
+        {room.golfCourseId && room.prepDone && !showHandicap
           ?
           <ScrollView flex={1}>
             <Box bg={'white'} marginY={5} rounded={20} paddingY={5}>
@@ -310,9 +306,10 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
             <Center padding={5} rounded={20} bg={'white'} marginBottom={5}>
               <Text fontSize={18} fontWeight={'semibold'} marginBottom={3}>All Strokes</Text>
               <LoadingView isLoading={courseIsLoading}>
-                <GolfArray course={golfCourse}>
-                  <UsersStrokes usersStrokes={room.usersStrokes} course={golfCourse} />
-                </GolfArray>
+                <GolfArray
+                  course={golfCourse}
+                  extraData={usersRowData}
+                />
               </LoadingView>
             </Center>
           </ScrollView>
