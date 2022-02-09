@@ -32,7 +32,7 @@ const GameScreen = (props: HomeStackScreenProps<'Game'>) => {
     }
   };
 
-  return renderGame(route.params.gameId);
+  return renderGame('golf'); //route.params.gameId);
 };
 
 export default GameScreen;

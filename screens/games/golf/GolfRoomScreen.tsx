@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import React, { useState, useEffect, useMemo } from 'react';
-import { Text, Button, Center, Box, HStack, ScrollView, VStack, useToast, Spinner } from "native-base";
+import { Text, Button, Center, Box, HStack, ScrollView, VStack, useToast, Spinner, FlatList } from "native-base";
 import { TouchableOpacity } from 'react-native';
 import { Entypo, Fontisto, Ionicons } from '@expo/vector-icons';
 import { getFirestore, doc, updateDoc, arrayRemove, onSnapshot, deleteField, setDoc } from 'firebase/firestore';
@@ -8,10 +8,10 @@ import { getAuth } from 'firebase/auth';
 import { GolfCourse, GolfGame, HomeStackParamList } from '../../../types';
 import GolfPrepScreen from './GolfPrepScreen';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { BackButton, GolfArray, RoomDetails, UsersBar, UserAvatar, Header, LoadingView, UsersRow, UserScores } from '../../../components';
-import { tryAsync, formatData, getBetScores, getColor, getColorType, getUserHoleNumber } from '../../../utils';
+import { BackButton, GolfArray, RoomDetails, UsersBar, UserAvatar, Header, LoadingView, UsersRow, UserScores, Defer } from '../../../components';
+import { tryAsync, formatData, getBetScores, getColor, getColorType, getUserHoleNumber, padArr } from '../../../utils';
 import { useGolfCourse, useUser } from '../../../hooks/useFireGet';
-import { useIsMounted } from '../../../hooks/common';
+import { useIsMounted, usePrevious } from '../../../hooks/common';
 
 interface BetRowProps {
   userId: string,
@@ -55,26 +55,24 @@ const BetRow = React.memo(({ userId, oppUid, course, room }: BetRowProps) => {
 });
 
 interface TransitionScoreboardProps {
-  userId: string | undefined;
+  userId: string;
   room: GolfGame;
   roomName: string;
   setShowTransitionScoreboard: (bool: boolean) => void;
-  golfCourse: GolfCourse | undefined;
+  golfCourse: GolfCourse;
   isMounted: React.MutableRefObject<boolean>;
+  holeNumber: number;
 };
 
-const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransitionScoreboard, golfCourse, isMounted }: TransitionScoreboardProps) => {
-  if (!userId || !golfCourse) return null;
-
+const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransitionScoreboard, golfCourse, isMounted, holeNumber }: TransitionScoreboardProps) => {
   const db = getFirestore();
   const roomRef = doc(db, 'rooms', roomName);
-  const holeNumber = getUserHoleNumber(room.usersStrokes[userId]);
 
   const handleBack = () => {
-    if (holeNumber - 2 < 0 || room.gameEnded) return;
+    if (room.gameEnded) return;
     let strokes = room.usersStrokes[userId].slice();
     // because index starts with 0
-    strokes[holeNumber - 2] = null;
+    strokes[holeNumber - 1] = null;
     updateDoc(roomRef, {
       [`usersStrokes.${userId}`]: strokes
     })
@@ -100,15 +98,17 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
             <Ionicons name="arrow-back" size={30} />
           </TouchableOpacity>
           : null}
+
         <Center flex={1}>
           <Text fontSize={18} fontWeight={'semibold'}>Betting Scores</Text>
         </Center>
+
         {!room.gameEnded
-          ? (1 <= holeNumber && holeNumber <= roomHoleLimit)
+          ? 1 <= holeNumber && holeNumber <= roomHoleLimit
             ? <TouchableOpacity onPress={handleForward}>
               <Ionicons name="arrow-forward" size={30} />
             </TouchableOpacity>
-            : <Box width={30}></Box>
+            : <Box width={30} />
           : null}
       </HStack>
       {sortedUserIds.map((uid) =>
@@ -124,6 +124,134 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
   );
 });
 
+interface InputBoxProps {
+  room: GolfGame;
+  roomName: string;
+  golfCourse: GolfCourse;
+  userId: string;
+  holeNumber: number;
+  setShowTransitionScoreboard: (bool: boolean) => void;
+  isMounted: React.MutableRefObject<boolean>;
+};
+
+const InputBox = ({ room, roomName, golfCourse, userId, holeNumber, setShowTransitionScoreboard, isMounted }: InputBoxProps) => {
+  const existingStrokeCount = room.usersStrokes[userId][holeNumber - 1];
+  
+  const [inputVal, setInputVal] = useState(existingStrokeCount ? existingStrokeCount : golfCourse?.parArr[holeNumber - 1]);
+  const [inputLoading, setInputLoading] = useState(false);
+  
+  useEffect(() => {
+    setInputVal(golfCourse.parArr[holeNumber - 1]);
+  }, [holeNumber]);
+
+  const roomRef = doc(getFirestore(), 'rooms', roomName);
+
+  const updateUserStrokes = () => {
+    // there is an error here. what happens if another user updates before this updates, how to fix? 
+    // this wouldnt occur since golf is played consecutively + each user only edits their own strokes, but watch out for future games
+
+    const strokes = padArr(room.usersStrokes[userId], golfCourse.parArr.length); // ensure strokes is padded
+
+    // because index starts with 0
+    strokes[holeNumber - 1] = inputVal;
+
+    // console.log('edited', strokes);
+    setInputLoading(true);
+
+    updateDoc(roomRef, {
+      [`usersStrokes.${userId}`]: strokes
+    })
+      .then(res => {
+        if (!isMounted.current) return;
+        setShowTransitionScoreboard(true);
+      })
+      .catch(err => {
+        console.error(err);
+      });
+  };
+
+  const increment = () => inputVal >= 50 ? null : setInputVal(inputVal + 1);
+  const decrement = () => inputVal <= 1 ? null : setInputVal(inputVal - 1);
+
+  const par = golfCourse.parArr && holeNumber && holeNumber > 0 ? golfCourse.parArr[holeNumber - 1] : null;
+  let strokeDescription = null;
+  if (par) {
+    const diff = par - inputVal;
+    const diffArr = ['Par', 'Birdie', 'Eagle', 'Albatross', 'Condor'];
+    strokeDescription = diffArr[diff];
+    if (inputVal === 1) strokeDescription = 'Hole in One';
+  }
+
+  let bg = par ? getColor(getColorType({ num: inputVal, arrType: 'Stroke', compareNumber: par })) : 'gray.100';
+
+  return (
+    <LoadingView isLoading={inputLoading}>
+      <Center>
+        <Text fontSize={40}>Hole: {holeNumber}</Text>
+        <Text fontSize={20}>Par: {par}</Text>
+        <Box marginY={5}>
+          <Box
+            size={120}
+            rounded={40}
+            alignItems='center'
+            justifyContent='center'
+            marginBottom={5}
+            borderColor={bg}
+            borderWidth={5}
+          >
+            <Text fontSize={50}>{inputVal}</Text>
+          </Box>
+          <HStack space={5}>
+            <TouchableOpacity onPress={decrement}>
+              <Entypo name="minus" size={50} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={increment}>
+              <Entypo name="plus" size={50} />
+            </TouchableOpacity>
+          </HStack>
+        </Box>
+        <HStack>
+          <Center flex={1}>
+            <Text fontSize={18}>{strokeDescription}</Text>
+          </Center>
+          <Button marginRight={5} onPress={updateUserStrokes}>Done</Button>
+        </HStack>
+      </Center>
+    </LoadingView>
+  );
+};
+
+
+const HoleSelector = ({ len, holeNumber, setHoleNumber }: { len: number, holeNumber: number, setHoleNumber: (num: number) => void }) => {
+  const holes = Array.from({ length: len }, (_, i) => i + 1);
+
+  const renderItem = ({ item: num }: { item: number }) => (
+    <TouchableOpacity onPress={() => setHoleNumber(num)}>
+      <Center
+        style={{ width: 40, height: 40 }}
+        backgroundColor={holeNumber === num ? 'gray.200' : 'gray.50'}
+        marginX={0.5}
+        rounded={5}
+        // border looks ugly
+      >
+        <Text fontSize={18}>{num}</Text>
+      </Center>
+    </TouchableOpacity>
+  );
+
+  return (
+    <Box marginX={3} marginBottom={3} shadow={1}>
+      <FlatList
+        data={holes}
+        renderItem={renderItem}
+        keyExtractor={(item) => item}
+        horizontal={true}
+        showsHorizontalScrollIndicator={false}
+      />
+    </Box>
+  );
+};
+
 interface GolfRoomScreenProps {
   roomName: string;
   navigation: NativeStackNavigationProp<HomeStackParamList, "Game">;
@@ -133,6 +261,11 @@ interface GolfRoomScreenProps {
 // may change usersStrokes to be a collection with multiple listeners to each player for scalability.
 // for now its just a more quick to implement solution
 const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenProps) => {
+  const db = getFirestore();
+  const auth = getAuth();
+  const userId = auth.currentUser?.uid;
+  const roomRef = doc(db, 'rooms', roomName);
+
   const [room, setRoom] = useState<GolfGame>();
   const [showTransitionScoreboard, setShowTransitionScoreboard] = useState(false);
   // need to handle connectivity issue, what happens if data received is nothing?
@@ -140,6 +273,13 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
   const toast = useToast();
   const isMounted = useIsMounted();
   const [showHandicap, setShowHandicap] = useState(false);
+  const [holeNumber, setHoleNumber] = useState(1);
+
+  const numberOfCompletedStrokes = room && userId ? room.usersStrokes[userId].filter(e => !!e).length : 0;
+  useEffect(() => {
+    if (!room || !userId) return;
+    setHoleNumber(getUserHoleNumber(room.usersStrokes[userId]));
+  }, [numberOfCompletedStrokes]); // if user has updated stroke
 
   // to get room
   useEffect(() => {
@@ -182,11 +322,6 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
       })();
     }
   }, [room?.usersStrokes]);
-
-  const db = getFirestore();
-  const auth = getAuth();
-  const userId = auth.currentUser?.uid;
-  const roomRef = doc(db, 'rooms', roomName);
 
   const handleLeave = async () => {
     if (!userId || !isMounted.current) return;
@@ -270,9 +405,8 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
     );
   };
 
-  const holeNumber = getUserHoleNumber(room.usersStrokes[userId]);
 
-  const childProps = { room, roomName, golfCourse, userId, holeNumber, setShowTransitionScoreboard, isMounted };
+  const childProps = { room, roomName, golfCourse: golfCourse as GolfCourse, userId, holeNumber, setShowTransitionScoreboard, isMounted };
 
   return (
     <>
@@ -282,11 +416,15 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
         {room.golfCourseId && room.prepDone && !showHandicap
           ?
           <ScrollView flex={1} keyboardShouldPersistTaps={'always'}>
-            <Box bg={'white'} marginY={5} rounded={20} paddingY={5}>
+            <Box bg={'white'} marginY={5} rounded={20} paddingY={3}>
               <LoadingView isLoading={courseIsLoading}>
-                {showTransitionScoreboard
-                  ? <TransitionScoreboard {...childProps} />
-                  : <InputBox {...childProps} />}
+                {golfCourse &&
+                  (showTransitionScoreboard // golfcourse alr exists here
+                    ? <TransitionScoreboard {...childProps} />
+                    : <>
+                      <HoleSelector len={golfCourse.parArr.length} holeNumber={holeNumber} setHoleNumber={setHoleNumber} />
+                      <InputBox {...childProps} />
+                    </>)}
               </LoadingView>
             </Box>
             <Center padding={5} rounded={20} bg={'white'} marginBottom={5}>
@@ -308,92 +446,4 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
     </>
   );
 };
-
-interface InputBoxProps {
-  room: GolfGame;
-  roomName: string;
-  golfCourse: GolfCourse | undefined;
-  userId: string;
-  holeNumber: number;
-  setShowTransitionScoreboard: (bool: boolean) => void;
-  isMounted: React.MutableRefObject<boolean>;
-};
-
-const InputBox = ({ room, roomName, golfCourse, userId, holeNumber, setShowTransitionScoreboard, isMounted }: InputBoxProps) => {
-  const [inputVal, setInputVal] = useState(1);
-  const [inputLoading, setInputLoading] = useState(false);
-  const updateUserStrokes = () => {
-    // there is an error here. what happens if another user updates before this updates, how to fix? 
-    // this wouldnt occur since golf is played consecutively + each user only edits their own strokes, but watch out for future games
-    const roomRef = doc(getFirestore(), 'rooms', roomName);
-    let strokes = room.usersStrokes[userId].slice();
-    // because index starts with 0
-    strokes[holeNumber - 1] = inputVal;
-    setInputLoading(true);
-
-    updateDoc(roomRef, {
-      [`usersStrokes.${userId}`]: strokes
-    })
-      .then(res => {
-        if (!isMounted.current) return;
-        setShowTransitionScoreboard(true);
-      })
-      .catch(err => {
-        console.error(err);
-      });
-  };
-
-  const increment = () => inputVal >= 50 ? null : setInputVal(inputVal + 1);
-  const decrement = () => inputVal <= 1 ? null : setInputVal(inputVal - 1);
-
-  if (!userId || !golfCourse) return null;
-
-  const par = golfCourse.parArr && holeNumber && holeNumber > 0 ? golfCourse.parArr[holeNumber - 1] : null;
-  let strokeDescription = null;
-  if (par) {
-    const diff = par - inputVal;
-    const diffArr = ['Par', 'Birdie', 'Eagle', 'Albatross', 'Condor'];
-    strokeDescription = diffArr[diff];
-    if (inputVal === 1) strokeDescription = 'Hole in One';
-  }
-
-  let bg = par ? getColor(getColorType({ num: inputVal, arrType: 'Stroke', compareNumber: par })) : 'gray.100';
-
-  return (
-    <LoadingView isLoading={inputLoading}>
-      <Center>
-        <Text fontSize={40}>Hole: {holeNumber}</Text>
-        <Text fontSize={20}>Par: {par}</Text>
-        <Box marginY={5}>
-          <Box
-            size={120}
-            rounded={40}
-            alignItems='center'
-            justifyContent='center'
-            marginBottom={5}
-            borderColor={bg}
-            borderWidth={5}
-          >
-            <Text fontSize={50}>{inputVal}</Text>
-          </Box>
-          <HStack space={5}>
-            <TouchableOpacity onPress={decrement}>
-              <Entypo name="minus" size={50} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={increment}>
-              <Entypo name="plus" size={50} />
-            </TouchableOpacity>
-          </HStack>
-        </Box>
-        <HStack>
-          <Center flex={1}>
-            <Text fontSize={18}>{strokeDescription}</Text>
-          </Center>
-          <Button marginRight={5} onPress={updateUserStrokes}>Done</Button>
-        </HStack>
-      </Center>
-    </LoadingView>
-  );
-};
-
 export default GolfRoomScreen;

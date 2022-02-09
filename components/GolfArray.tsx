@@ -2,7 +2,7 @@ import _ from 'lodash';
 import React, { useCallback, useMemo } from 'react';
 import { HStack, Center, Text, Box, ScrollView, VStack, Spinner, FlatList } from 'native-base';
 import { GolfCourse, GolfStrokes, Stroke } from '../types';
-import { getColor, getColorType } from '../utils/golfUtils';
+import { getColor, getColorType, padArr } from '../utils';
 import { useUser } from '../hooks/useFireGet';
 import { useAppSelector } from '../hooks/selectorAndDispatch';
 import Defer from './Defer';
@@ -16,7 +16,7 @@ interface TileProps {
 };
 
 const Tile = React.memo(({ num, color, style }: TileProps) => {
-  return <Box width="30" height="30" bg={color} justifyContent='center' alignItems={'center'} style={style}>{num}</Box>;
+  return <Center width="30" height="30" bg={color} style={style}>{num}</Center>;
 });
 
 type ArrType = 'Stroke' | 'Bet' | 'Par' | 'Hole' | 'Handicap';
@@ -93,12 +93,6 @@ const formatRowToTileData = ({ text, arr, arrType, comparisonArr, style }: Forma
   });
 
   return res;
-};
-
-const padArr = (arr: any[], finalLen: number) => {
-  const len = arr.length;
-  if (finalLen <= len) return arr;
-  return [...arr.slice(), ...new Array(finalLen - len).fill(null)];
 };
 
 interface UserRowProps {

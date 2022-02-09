@@ -42,7 +42,7 @@ const GamesScreen = ({ navigation }: HomeStackScreenProps<'Games'>) => {
         <Image
           source={item.imagePath}
           alt="image"
-          height={200}
+          height={300}
           width="100%"
           resizeMode="cover"
         />

@@ -74,7 +74,7 @@ export const getColorType = ({ num, arrType, compareNumber }: GetColorTypeProps)
     case 'Stroke':
       // comparisonArr is par arr
       if (compareNumber == null || compareNumber == undefined) return 0;
-      if (num < compareNumber) return 3;
+      if (num < compareNumber) return 2;
       else if (num === compareNumber) return 1;
       return 0;
     case 'Bet':
@@ -105,4 +105,10 @@ export const getUserHoleNumber = (arr: GolfStrokes) => {
     if (arr[i] == null) break;
   }
   return i + 1;
+};
+
+export const padArr = (arr: any[], finalLen: number) => {
+  const len = arr.length;
+  if (finalLen <= len) return arr;
+  return [...arr.slice(), ...new Array(finalLen - len).fill(null)];
 };
