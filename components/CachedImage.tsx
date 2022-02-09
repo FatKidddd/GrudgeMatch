@@ -311,7 +311,8 @@ const CachedImage = ({
             const preview = _.last(imageSources.filter(x => x));
             if (preview) {
               debug?.(`Setting preview: ${JSON.stringify(preview)}\nFor ${uri}`);
-              setPreview(preview);
+              if (mountedRef.current)
+                setPreview(preview);
             }
           } catch (e) {
             onError(e);
@@ -344,7 +345,8 @@ const CachedImage = ({
             // If we were able to get it from the cache or it's already a local image like base64 or file://, then set this
             // so that we don't go and try to load the previews in tandem with the cached image.
 
-            setHasLocal(Boolean(cachedUri));
+            if (mountedRef.current)
+              setHasLocal(Boolean(cachedUri));
             if (!cachedUri) {
               cachedUri = await cacheEntry.downloadAsync({onProgress});
             }

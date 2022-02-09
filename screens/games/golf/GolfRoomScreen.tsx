@@ -1,18 +1,16 @@
 import _ from 'lodash';
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Text, Popover, Button, Center, Box, HStack, ScrollView, VStack, PresenceTransition, useToast, Spinner, StatusBar, IconButton, Icon, FlatList } from "native-base";
+import React, { useState, useEffect, useMemo } from 'react';
+import { Text, Button, Center, Box, HStack, ScrollView, VStack, useToast, Spinner } from "native-base";
 import { TouchableOpacity } from 'react-native';
-import { Entypo, Fontisto, Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { getFirestore, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, collection, deleteField, getDoc, addDoc, setDoc } from 'firebase/firestore';
+import { Entypo, Fontisto, Ionicons } from '@expo/vector-icons';
+import { getFirestore, doc, updateDoc, arrayRemove, onSnapshot, deleteField, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { GolfCourse, GolfGame, HomeStackParamList } from '../../../types';
 import GolfPrepScreen from './GolfPrepScreen';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BackButton, GolfArray, RoomDetails, UsersBar, UserAvatar, Header, LoadingView, UsersRow, UserScores } from '../../../components';
-import { getBetScores, getColor, getColorType, getUserHoleNumber } from '../../../utils/golfUtils';
-import { tryAsync } from '../../../utils/asyncUtils';
+import { tryAsync, formatData, getBetScores, getColor, getColorType, getUserHoleNumber } from '../../../utils';
 import { useGolfCourse, useUser } from '../../../hooks/useFireGet';
-import { formatData } from '../../../utils/dateUtils';
 import { useIsMounted } from '../../../hooks/common';
 
 interface BetRowProps {
@@ -94,22 +92,12 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
   const sortedUserIds = useMemo(() => Object.keys(room.usersStrokes).filter((val) => val != userId).sort(), [room.usersStrokes]);
   const roomHoleLimit = golfCourse.parArr.length;
 
-  const renderItem = useCallback((uid) =>
-    <BetRow
-      key={uid}
-      userId={userId}
-      oppUid={uid}
-      course={golfCourse}
-      room={room}
-    />
-    , []);
-
   return (
     <Box paddingX={5}>
       <HStack alignItems='center'>
         {!room.gameEnded
           ? <TouchableOpacity onPress={handleBack}>
-            <Ionicons name="arrow-back" size={30}/>
+            <Ionicons name="arrow-back" size={30} />
           </TouchableOpacity>
           : null}
         <Center flex={1}>
@@ -123,7 +111,15 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
             : <Box width={30}></Box>
           : null}
       </HStack>
-      {sortedUserIds.map(renderItem)}
+      {sortedUserIds.map((uid) =>
+        <BetRow
+          key={uid}
+          userId={userId}
+          oppUid={uid}
+          course={golfCourse}
+          room={room}
+        />
+      )}
     </Box>
   );
 });
@@ -153,8 +149,8 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
         ...res.data()
       } as GolfGame;
 
+      formatData(data);
       if (isMounted.current) {
-        formatData(data);
         console.log('room screen', data);
         setRoom(data);
         // handle game end
@@ -193,7 +189,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
   const roomRef = doc(db, 'rooms', roomName);
 
   const handleLeave = async () => {
-    if (!userId) return;
+    if (!userId || !isMounted.current) return;
     const userRef = doc(db, 'users', userId);
 
     // only delete user from room if game hasnt ended
@@ -209,13 +205,16 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
     });
   };
 
+  const changeHandicap = () => isMounted.current ? setShowHandicap(!showHandicap) : null;
+  const goBack = () => isMounted.current ? navigation.navigate("Games") : null;
+
   const roomHeader = useMemo(() => {
     if (!room) return null;
     if (isSavedView) {
       return (
         <HStack alignItems="center" justifyContent="space-between" shadow={1} marginX={3} marginY={2} space={2}>
           <UsersBar userIds={room.userIds} />
-          <TouchableOpacity onPress={() => setShowHandicap(!showHandicap)}>
+          <TouchableOpacity onPress={changeHandicap}>
             <Fontisto name='spinner-rotate-forward' size={25}/>
           </TouchableOpacity>
         </HStack>
@@ -224,7 +223,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
     return (
       <Header>
         <HStack alignItems="center" justifyContent="space-between">
-          <BackButton onPress={() => navigation.navigate("Games")} />
+          <BackButton onPress={goBack} />
           <UsersBar userIds={room.userIds} />
           <RoomDetails roomName={roomName} room={room} handleLeave={handleLeave} />
         </HStack>
@@ -232,20 +231,18 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
     );
   }, [room?.userIds, isSavedView, handleLeave]);
 
+  const handleSaveError = () => {
+    if (!isMounted.current) return;
+    toast.show({
+      title: 'Room failed to save',
+      status: 'error',
+    });
+  };
+
   const save = () => {
-    const handleSaveError = () => {
-      if (!isMounted.current) return;
-      toast.show({
-        title: 'Room failed to save',
-        status: 'error',
-      });
-    };
-
     if (!userId) return handleSaveError();
-
     // may change to room.gameId
     const docRef = doc(db, 'users', userId, 'golfHistory', roomName);
-
     // if fail to save, room name will still be there, so user when entering golf game will trigger the save function
     setDoc(docRef, {
       dateSaved: new Date().toJSON()
@@ -284,7 +281,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
         {/* check that room has a golf course and that all handicap between pairs has been chosen */}
         {room.golfCourseId && room.prepDone && !showHandicap
           ?
-          <ScrollView flex={1}>
+          <ScrollView flex={1} keyboardShouldPersistTaps={'always'}>
             <Box bg={'white'} marginY={5} rounded={20} paddingY={5}>
               <LoadingView isLoading={courseIsLoading}>
                 {showTransitionScoreboard

@@ -35,7 +35,7 @@ const UserAvatar = React.memo(({ userId, size="sm", ...otherProps }: UserAvatarP
         />
         : <Box style={{ height: imageSize, width: imageSize, borderRadius: 100, borderWidth: 1, borderColor: 'white', alignItems: 'center', justifyContent: 'center', backgroundColor: '#bbbbbb' }}>
           <Text numberOfLines={1} fontSize={size} fontWeight={'semibold'}>
-          {getInitials(user.name)}
+            {getInitials(user.name)}
           </Text>
         </Box>}
     </Box>

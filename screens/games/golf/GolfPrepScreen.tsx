@@ -1,15 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getDoc, updateDoc, getDocs, getFirestore, collection, doc, addDoc, DocumentSnapshot, DocumentData, query, limit, startAfter, orderBy } from 'firebase/firestore';
-import { User, GolfCourse, GolfGame, HandicapInfo } from '../../../types';
-import { Box, FlatList, Heading, Avatar, HStack, VStack, Text, Spacer, Center, Button, Input, Pressable, ScrollView, Spinner } from "native-base";
-import { TouchableOpacity, KeyboardAvoidingView } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { updateDoc, getDocs, getFirestore, collection, doc, DocumentSnapshot, DocumentData, query, limit, startAfter, orderBy } from 'firebase/firestore';
+import { GolfCourse, GolfGame } from '../../../types';
+import { Box, FlatList, Text, Center, Button, Input, HStack, ScrollView, Spinner, KeyboardAvoidingView } from "native-base";
+import { TouchableOpacity } from 'react-native';
 import { AntDesign, Fontisto, Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { GolfArray, LoadingView, UserAvatar } from '../../../components';
+import { Defer, GolfArray, LoadingView, UserAvatar } from '../../../components';
 import { useGolfCourse, useUser } from '../../../hooks/useFireGet';
-import { useAppDispatch, useAppSelector } from '../../../hooks/selectorAndDispatch';
-import { tryAsync } from '../../../utils/asyncUtils';
-import { addGolfCourses, setGolfCourse } from '../../../redux/features/golfCourses';
+import { useAppDispatch } from '../../../hooks/selectorAndDispatch';
+import { tryAsync } from '../../../utils';
+import { addGolfCourses } from '../../../redux/features/golfCourses';
 import { useIsMounted } from '../../../hooks/common';
 
 interface CourseViewProps {
@@ -105,7 +104,7 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
       console.log("Got golf courses");
       const newGolfCourses = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as GolfCourse));
 
-      if (!isMounted.current) return;
+      // if (!isMounted.current) return;
       dispatch(addGolfCourses(newGolfCourses));
 
       // newGolfCourses.forEach(newGolfCourse => {
@@ -114,15 +113,14 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
 
       // update lastVisible
       const newLastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-      if (!isMounted.current) return;
+      // if (!isMounted.current) return;
       setLastVisible(newLastVisible);
 
       // add golfCourseIds
       const newGolfCourseIds = newGolfCourses.map(newGolfCourse => newGolfCourse.id); 
-      if (!isMounted.current) return;
+      // if (!isMounted.current) return;
       setGolfCourseIds([...golfCourseIds, ...newGolfCourseIds]);
     }
-    if (!isMounted.current) return;
     setLoading(false);
   };
 
@@ -186,9 +184,10 @@ interface HandicapRowProps {
   oppUid: string;
   room: GolfGame;
   roomName: string;
+  renderBackCount: boolean;
 };
 
-const HandicapRow = ({ userId, oppUid, room, roomName }: HandicapRowProps) => {
+const HandicapRow = React.memo(({ userId, oppUid, room, roomName, renderBackCount }: HandicapRowProps) => {
   const [user, userIsLoading] = useUser(userId);
   const [otherUser, otherUserIsLoading] = useUser(oppUid);
   const [frontVal, setFrontVal] = useState<number>();
@@ -225,13 +224,15 @@ const HandicapRow = ({ userId, oppUid, room, roomName }: HandicapRowProps) => {
     else setBackVal(num);
   };
 
+  const checkNumberInRange = (num: number | undefined | null) => {
+    if (typeof num !== 'number') return false;
+    return 0 <= num && num <= 9;
+  };
+
   const handleInputSubmit = async (frontOrBackCount: "frontCount" | "backCount") => {
-    const checkNumberInRange = (num: number | undefined | null) => {
-      if (num === undefined || num === null) return false;
-      return 0 <= num && num <= 9;
-    }
-    if (!checkNumberInRange(frontVal) || !checkNumberInRange(backVal)) return;
-    //console.log(frontVal, backVal)
+    const canFront = frontOrBackCount === 'frontCount' && checkNumberInRange(frontVal);
+    const canBack = frontOrBackCount === 'backCount' && checkNumberInRange(backVal);
+    if (!canFront && !canBack) return;
     await updateDoc(roomRef, {
       [`pointsArr.${pairId}.${frontOrBackCount}`]: frontOrBackCount === "frontCount" ? frontVal : backVal
     });
@@ -256,17 +257,17 @@ const HandicapRow = ({ userId, oppUid, room, roomName }: HandicapRowProps) => {
       <Center>
         <Text fontWeight={'semibold'}>{frontOrBackCount === "frontCount" ? 'Front' : 'Back'}</Text>
         <Box height={50} width={50}>
-        <Input
-          value={val ? val.toString() : undefined}
-          onChangeText={text => handleInputChange(frontOrBackCount, text)}
-          onEndEditing={() => handleInputSubmit(frontOrBackCount)}
-          // editable={!handicapInfo.locked}
-          flex={1}
-          fontSize={20}
-          rounded={10}
-          textAlign={'center'}
-          autoCorrect={false}
-        />
+          <Input
+            value={val ? val.toString() : undefined}
+            onChangeText={text => handleInputChange(frontOrBackCount, text)}
+            onEndEditing={() => handleInputSubmit(frontOrBackCount)}
+            editable={!handicapInfo.locked}
+            flex={1}
+            fontSize={20}
+            rounded={10}
+            textAlign={'center'}
+            autoCorrect={false}
+          />
         </Box>
       </Center>
     );
@@ -304,15 +305,16 @@ const HandicapRow = ({ userId, oppUid, room, roomName }: HandicapRowProps) => {
         </HStack>
         <HStack justifyContent={'space-evenly'} flex={1} marginLeft={3}>
           {renderInput("frontCount")}
-          {renderInput("backCount")}
+          {renderBackCount && renderInput("backCount")}
         </HStack>
       </HStack>
     </Center>
   );
-};
+});
 
 const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => {
   const [course, courseIsLoading] = useGolfCourse(room.golfCourseId);
+  const renderBackCount = course ? course?.parArr.length > 9 : true;
 
   const handleStart = () => {
     const req = room.userIds.length * (room.userIds.length - 1) / 2;
@@ -336,10 +338,6 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
       .catch(err => {
         console.error(err);
       });
-  }
-
-  const renderItem = ({ item }: { item: string }) => {
-    return <HandicapRow userId={userId} oppUid={item} room={room} roomName={roomName} />;
   };
 
   const isReady = useMemo(() => {
@@ -353,39 +351,37 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
 
   const userIds = useMemo(() => room.userIds.filter(uid => uid != userId), [room.userIds]);
 
-  const renderHeader = () => {
-    return (
-      <Center bg="white" padding={15} rounded={20} width="100%" flex={1}>
-        <Text fontSize={18} fontWeight="500">Handicap</Text>
-        <LoadingView isLoading={courseIsLoading}>
-          <GolfArray course={course} />
-        </LoadingView>
-      </Center>
-    );
-  };
-
-  const renderFooter = () => {
-    return (
-      <Center>
-        {userId === room.gameOwnerUserId
-          ? isReady
-            ? <Button onPress={handleStart}>Start game</Button>
-            : <Text>Make sure all give and takes are locked</Text>
-          : <Text>Wait for room owner to start game</Text>}
-      </Center>
-    );
-  };
-
   return (
-    <KeyboardAvoidingView style={{ flex: 1, paddingVertical: 10 }} behavior={'height'} keyboardVerticalOffset={200}>
-      <FlatList
-        data={userIds}
-        renderItem={renderItem}
-        keyExtractor={(item) => item} // since the item is the user id itself
-        ListHeaderComponent={renderHeader}
-        ListFooterComponent={renderFooter}
-      />
-    </KeyboardAvoidingView>
+    <KeyboardAvoidingView flex={1} behavior={'padding'}>
+      <ScrollView marginY={3} flex={1} keyboardShouldPersistTaps={'always'}>
+        <Center bg="white" padding={15} rounded={20} width="100%" flex={1}>
+          <Text fontSize={18} fontWeight="500">Handicap</Text>
+          <LoadingView isLoading={courseIsLoading}>
+            <GolfArray course={course} />
+          </LoadingView>
+        </Center>
+        <Defer chunkSize={1}>
+          {userIds.map((uid, idx) =>
+            <HandicapRow
+              key={uid + idx}
+              userId={userId}
+              oppUid={uid}
+              room={room}
+              roomName={roomName}
+              renderBackCount={renderBackCount}
+            />
+          )}
+        </Defer>
+        <Center>
+          <Text textAlign={'center'} marginY={3}>Make sure all players have joined the room before starting!</Text>
+          {userId === room.gameOwnerUserId
+            ? isReady
+              ? <Button onPress={handleStart}>Start game</Button>
+              : <Text>Make sure all give and takes are locked</Text>
+            : <Text>Wait for room owner to start game</Text>}
+        </Center>
+    </ScrollView>
+      </KeyboardAvoidingView>
   );
 };
 

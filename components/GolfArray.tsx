@@ -5,7 +5,7 @@ import { GolfCourse, GolfStrokes, Stroke } from '../types';
 import { getColor, getColorType } from '../utils/golfUtils';
 import { useUser } from '../hooks/useFireGet';
 import { useAppSelector } from '../hooks/selectorAndDispatch';
-import { Defer } from '.';
+import Defer from './Defer';
 
 interface TileProps {
   num: Stroke | string;
@@ -198,32 +198,33 @@ const Row = React.memo(({ data }: { data: FormatRowToTileDataProps }) => {
 
 export const GolfArray = React.memo(({ course, showCourseInfo = true, children }: GolfArrayProps) => {
   if (!course) return null;
-  const numOfHoles = course.parArr.length;
-  const holes = Array.from({ length: numOfHoles }, (_, i) => i + 1);
-  
-  const res: FormatRowToTileDataProps[] = useMemo(() => [
-    {
-      text: 'Hole',
-      arr: holes,
-      arrType: 'Hole',
-      style: {
-        marginBottom: 10
+
+  const res: FormatRowToTileDataProps[] = useMemo(() => {
+    const numOfHoles = course.parArr.length;
+    return [
+      {
+        text: 'Hole',
+        arr: Array.from({ length: numOfHoles }, (_, i) => i + 1),
+        arrType: 'Hole',
+        style: {
+          marginBottom: 10
+        }
+      },
+      {
+        text: 'Par',
+        arr: course?.parArr,
+        arrType: 'Par',
+      },
+      {
+        text: 'Handicap',
+        arr: course?.handicapIndexArr,
+        arrType: 'Handicap',
+        style: {
+          marginBottom: 10
+        }
       }
-    },
-    {
-      text: 'Par',
-      arr: course.parArr,
-      arrType: 'Par',
-    },
-    {
-      text: 'Handicap',
-      arr: course.handicapIndexArr,
-      arrType: 'Handicap',
-      style: {
-        marginBottom: 10
-      }
-    },
-  ], [course]);
+    ];
+  }, [course]);
 
   return (
     <ScrollView
@@ -232,12 +233,10 @@ export const GolfArray = React.memo(({ course, showCourseInfo = true, children }
       horizontal
     >
       <VStack>
-        <Defer chunkSize={2}>
-          <Row data={res[0]} />
-          {showCourseInfo && <Row data={res[1]} />}
-          {showCourseInfo && <Row data={res[2]} />}
-          {children}
-        </Defer>
+        <Row data={res[0]} />
+        {showCourseInfo && <Row data={res[1]} />}
+        {showCourseInfo && <Row data={res[2]} />}
+        {children}
       </VStack>
     </ScrollView>
   );

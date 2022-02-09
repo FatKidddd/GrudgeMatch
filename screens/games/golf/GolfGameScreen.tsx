@@ -3,19 +3,17 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { getAuth } from 'firebase/auth';
 import { getFirestore, getDoc, collection, query, orderBy, limit, startAfter, onSnapshot, doc, getDocs, setDoc, updateDoc, arrayUnion, DocumentData, DocumentSnapshot } from 'firebase/firestore';
 import GolfRoomScreen from './GolfRoomScreen';
-import { Modal, Button, Input, VStack, Text, FormControl, Box, Center, NativeBaseProvider, Tooltip, AlertDialog, HStack, Link, FlatList, Spinner } from "native-base"
-import { GolfCourse, GolfGame, HomeStackParamList, HomeStackScreenProps, SavedRoom } from "../../../types";
-import { StatusBar, TouchableOpacity } from "react-native";
+import { Modal, Button, Input, VStack, Text, FormControl, Box, Center, AlertDialog, HStack, Link, FlatList, Spinner } from "native-base"
+import { GolfGame, HomeStackParamList, SavedRoom } from "../../../types";
+import { TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import gamesData from "../../../gamesData";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAppDispatch, useAppSelector } from "../../../hooks/selectorAndDispatch";
 import { BackButton, Header, LoadingView, UsersBar } from "../../../components";
 import { useRoom, useUser, useGolfCourse } from '../../../hooks/useFireGet';
-import { getBetScores, getColor, getColorType } from "../../../utils/golfUtils";
-import { tryAsync } from '../../../utils/asyncUtils';
+import { tryAsync, formatData, getBetScores, getColor, getColorType } from '../../../utils';
 import { addSavedRooms } from '../../../redux/features/gamesHistory';
-import { formatData } from '../../../utils/dateUtils';
 import { useIsMounted } from '../../../hooks/common';
 
 const RoomModalButtons = () => {
@@ -356,7 +354,7 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
 
   const renderItem = useCallback(({ item }) =>
     <RoomView roomName={item.id} setRoomNameDetailed={setRoomNameDetailed} userId={userId} />
-    , []);
+    , [userId]);
 
   return (
     <Box flex={1} width={'100%'}>

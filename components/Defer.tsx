@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect, Children } from "react";
+import { useIsMounted } from "../hooks/common";
 
 const Defer = ({ chunkSize=1, children }: { chunkSize?: number, children: React.ReactNode }) => {
   const [renderedItemsCount, setRenderedItemsCount] = useState(chunkSize);
+  const isMounted = useIsMounted();
 
   const childrenArray = useMemo(() => Children.toArray(children), [
     children
@@ -11,6 +13,7 @@ const Defer = ({ chunkSize=1, children }: { chunkSize?: number, children: React.
     if (renderedItemsCount < childrenArray.length) {
       window.requestIdleCallback(
         () => {
+          if (!isMounted.current) return;
           setRenderedItemsCount(
             Math.min(renderedItemsCount + chunkSize, childrenArray.length)
           );
