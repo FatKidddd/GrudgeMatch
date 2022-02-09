@@ -1,7 +1,8 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { HomeStackScreenProps } from '../types';
 import { Box, FlatList, Heading, HStack, Image, Pressable, Text } from 'native-base';
 import gamesData, { GameDataType, GamesDataType } from '../gamesData';
+import { Defer } from '../components';
 
 const GamesScreen = ({ navigation }: HomeStackScreenProps<'Games'>) => {
   const handlePress = (itemId: string) => {
@@ -84,6 +85,7 @@ const GamesScreen = ({ navigation }: HomeStackScreenProps<'Games'>) => {
 
   return (
     <Box width='100%' flex={1}>
+
       {/* <FlatList
         contentContainerStyle={{ alignSelf: 'flex-start' }}
         numColumns={3}

@@ -355,7 +355,7 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
 
   const renderHeader = () => {
     return (
-      <Center bg="white" padding={15} rounded={20} width="100%" flex={1} key='handicapHeader'>
+      <Center bg="white" padding={15} rounded={20} width="100%" flex={1}>
         <Text fontSize={18} fontWeight="500">Handicap</Text>
         <LoadingView isLoading={courseIsLoading}>
           <GolfArray course={course} />
@@ -366,7 +366,7 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
 
   const renderFooter = () => {
     return (
-      <Center key='handicapFooter'>
+      <Center>
         {userId === room.gameOwnerUserId
           ? isReady
             ? <Button onPress={handleStart}>Start game</Button>
@@ -382,8 +382,8 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
         data={userIds}
         renderItem={renderItem}
         keyExtractor={(item) => item} // since the item is the user id itself
-        ListHeaderComponent={renderHeader()}
-        ListFooterComponent={renderFooter()}
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
       />
     </KeyboardAvoidingView>
   );

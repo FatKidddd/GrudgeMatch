@@ -5,6 +5,7 @@ import { GolfCourse, GolfStrokes, Stroke } from '../types';
 import { getColor, getColorType } from '../utils/golfUtils';
 import { useUser } from '../hooks/useFireGet';
 import { useAppSelector } from '../hooks/selectorAndDispatch';
+import { Defer } from '.';
 
 interface TileProps {
   num: Stroke | string;
@@ -106,14 +107,15 @@ interface UserRowProps {
   parArr: Array<number>;
 }
 
-const getUserRowData = ({ userName, strokes, parArr }: UserRowProps): FormatRowToTileDataProps => {
+export const UserRow = ({ userName, strokes, parArr }: UserRowProps) => {
   const paddedStrokes = padArr(strokes, parArr.length);
-  return {
+  const userRowData: FormatRowToTileDataProps = {
     text: userName,
     arr: paddedStrokes,
     arrType: 'Stroke',
     comparisonArr: parArr
   };
+  return <Row data={userRowData} />;
 };
 
 interface UsersStrokesProps {
@@ -123,15 +125,23 @@ interface UsersStrokesProps {
   course: GolfCourse | undefined;
 };
 
-const useUsersRowData = ({ usersStrokes, course }: UsersStrokesProps): FormatRowToTileDataProps[] => {
+export const UsersRow = ({ usersStrokes, course }: UsersStrokesProps) => {
+  // console.log('rendered usersrowdata')
   const users = useAppSelector(state => state.users);
   const sortedStrokes = Object.entries(usersStrokes).sort();
-  if (!course || !sortedStrokes.every(([uid, _]) => Boolean(users[uid]))) return [];
-  return sortedStrokes.map(([uid, strokes], i) => getUserRowData({
-    userName: users[uid]?.name,
-    strokes,
-    parArr: course.parArr
-  }));
+  // const haveAllNames = sortedStrokes.every(([uid, _]) => Boolean(users[uid]))
+  if (!course) return null;
+  return (
+    <Defer chunkSize={1}>
+      {sortedStrokes.map(([uid, strokes], idx) =>
+        <UserRow
+          key={idx}
+          userName={users[uid]?.name}
+          strokes={strokes}
+          parArr={course.parArr}
+        />)}
+    </Defer>
+  );
 };
 
 interface UserScoresProps {
@@ -140,20 +150,23 @@ interface UserScoresProps {
   len: number;
 };
 
-const useUserScoresData = ({ userScores, oppUid, len }: UserScoresProps): FormatRowToTileDataProps[] => {
+export const UserScores = ({ userScores, oppUid, len }: UserScoresProps) => {
+  // console.log('rendered userscoresdata');
   const [oppUser, oppUserIsLoading] = useUser(oppUid);
   const paddedStrokes = padArr(userScores, len);
-  return [{ 
+  const userScoresData: FormatRowToTileDataProps = { 
     text: 'You vs ' + oppUser?.name,
     arr: paddedStrokes,
     arrType: 'Bet'
-  }];
+  };
+  return <Row data={userScoresData} />;
 };
 
 interface GolfArrayProps {
   course: GolfCourse | undefined;
   showCourseInfo?: boolean;
-  extraData?: FormatRowToTileDataProps[];
+  // extraData?: FormatRowToTileDataProps[];
+  children?: React.ReactNode;
 };
 
 // I've tried so many ways to fix the garbage performance of this, turns out the issue is that rendering new UI will not be memoized lol so when showing and hiding it kills everything
@@ -169,23 +182,26 @@ const Label = React.memo(({ text, style }: Label) => {
   return <Text numberOfLines={1} width={110} height={30} textAlign='right' paddingRight={2} style={style}>{text}</Text>
 });
 
-const GolfArray = React.memo(({ course, showCourseInfo=true, extraData }: GolfArrayProps) => {
+const Row = React.memo(({ data }: { data: FormatRowToTileDataProps }) => {
+  const { text, style, ...withoutText } = data;
+  const labelProps = { text, style };
+  const rowData = formatRowToTileData({ ...withoutText, style });
+  return (
+    <HStack>
+      <Label {...labelProps} />
+      <Defer chunkSize={9}>
+        {rowData.map((tileData, idx) => <Tile key={idx} {...tileData} />)}
+      </Defer>
+    </HStack>
+  );
+});
+
+export const GolfArray = React.memo(({ course, showCourseInfo = true, children }: GolfArrayProps) => {
   if (!course) return null;
-  console.log('rendered GolfArray');
   const numOfHoles = course.parArr.length;
   const holes = Array.from({ length: numOfHoles }, (_, i) => i + 1);
-
-  const labels: Label[] = [];
-  const body: TileProps[] = [];
-
-  const allocateData = (data: FormatRowToTileDataProps) => {
-    const { text, style, ...withoutText } = data;
-    labels.push({ text, style });
-    const rowData = formatRowToTileData({ ...withoutText, style });
-    body.push(...rowData);
-  };
   
-  const res: FormatRowToTileDataProps[] = [
+  const res: FormatRowToTileDataProps[] = useMemo(() => [
     {
       text: 'Hole',
       arr: holes,
@@ -207,56 +223,45 @@ const GolfArray = React.memo(({ course, showCourseInfo=true, extraData }: GolfAr
         marginBottom: 10
       }
     },
-  ];
+  ], [course]);
 
-  allocateData(res[0]);
-
-  if (showCourseInfo) {
-    allocateData(res[1]);
-    allocateData(res[2]);
-  }
-
-  extraData?.forEach((val, idx) => {
-    allocateData(val);
-  });
-
-  const renderLabel = useCallback(({ item }: { item: Label }) => <Label {...item} />, []);
-
-  const renderBody = useCallback(({ item }: { item: TileProps }) => <Tile {...item} />, []);
-
-  return null;
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
       showsHorizontalScrollIndicator={false}
       horizontal
-      removeClippedSubviews={true}
-      flex={1}
     >
-      <FlatList
-        showsVerticalScrollIndicator={false}
-        showsHorizontalScrollIndicator={false}
-        data={labels}
-        renderItem={renderLabel}
-        keyExtractor={(item, idx) => 'labels' + course.id + idx.toString()}
-        scrollEnabled={false}
-        listKey={'labels' + course.id}
-      />
-      <FlatList
-        contentContainerStyle={{ alignSelf: 'flex-start' }}
-        numColumns={numOfHoles + Math.floor(numOfHoles / 9) + 1} // flex-wrap
-        showsVerticalScrollIndicator={false}
-        showsHorizontalScrollIndicator={false}
-        data={body}
-        renderItem={renderBody}
-        keyExtractor={(item, idx) => 'body' + course.id + idx.toString()}
-        scrollEnabled={false}
-        listKey={'body' + course.id}
-      />
+      <VStack>
+        <Defer chunkSize={2}>
+          <Row data={res[0]} />
+          {showCourseInfo && <Row data={res[1]} />}
+          {showCourseInfo && <Row data={res[2]} />}
+          {children}
+        </Defer>
+      </VStack>
     </ScrollView>
   );
-}, (prevProps, nextProps) => {
-  return prevProps.course?.id === nextProps.course?.id && prevProps.extraData === nextProps.extraData && prevProps.showCourseInfo === nextProps.showCourseInfo;
 });
 
-export { GolfArray, getUserRowData, useUsersRowData, useUserScoresData };
+// , (prevProps, nextProps) => {
+//   const { course: prevCourse, ...prevRest } = prevProps;
+//   const { course: nextCourse, ...nextRest } = nextProps;
+//   return prevCourse?.id === nextCourse?.id && prevRest === nextRest;
+// });
+
+  // console.log('rendered GolfArray');
+  // const { parArr, handicapIndexArr, ...courseRest } = course;
+  // console.log('\n')
+  // console.log('new')
+  // // console.log(courseRest, ...parArr, ...handicapIndexArr)
+  // console.log('\n')
+  // if (extraData) {
+  //   extraData.forEach(e => {
+  //     const { arr, comparisonArr, ...rest } = e;
+  //     const b = comparisonArr ? comparisonArr : [];
+  //     console.log(rest, ...arr, ...b);
+  //   })
+  // } else {
+  //   console.log(extraData);
+  // }
+  // console.log('\n')

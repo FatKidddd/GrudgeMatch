@@ -2,13 +2,13 @@ import _ from 'lodash';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Text, Popover, Button, Center, Box, HStack, ScrollView, VStack, PresenceTransition, useToast, Spinner, StatusBar, IconButton, Icon, FlatList } from "native-base";
 import { TouchableOpacity } from 'react-native';
-import { Entypo, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Entypo, Fontisto, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { getFirestore, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, collection, deleteField, getDoc, addDoc, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { GolfCourse, GolfGame, HomeStackParamList } from '../../../types';
 import GolfPrepScreen from './GolfPrepScreen';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { BackButton, GolfArray, RoomDetails, UsersBar, UserAvatar, Header, LoadingView, useUserScoresData, useUsersRowData } from '../../../components';
+import { BackButton, GolfArray, RoomDetails, UsersBar, UserAvatar, Header, LoadingView, UsersRow, UserScores } from '../../../components';
 import { getBetScores, getColor, getColorType, getUserHoleNumber } from '../../../utils/golfUtils';
 import { tryAsync } from '../../../utils/asyncUtils';
 import { useGolfCourse, useUser } from '../../../hooks/useFireGet';
@@ -23,15 +23,10 @@ interface BetRowProps {
 };
 
 const BetRow = React.memo(({ userId, oppUid, course, room }: BetRowProps) => {
-  const [showDetail, setShowDetail] = useState(false);
+  // const [showDetail, setShowDetail] = useState(false);
   const [user, userIsLoading] = useUser(userId);
   const [oppUser, oppUserIsLoading] = useUser(oppUid);
   const { finalScore, finalScores } = getBetScores({ userId, oppUid, course, room });
-  const userScoresData = useUserScoresData({
-    userScores: finalScores,
-    oppUid,
-    len: course.parArr.length
-  });
 
   return (
     <VStack width='100%' borderWidth={2} borderColor={'gray.100'} rounded={20} padding={3} marginTop={3}>
@@ -54,11 +49,9 @@ const BetRow = React.memo(({ userId, oppUid, course, room }: BetRowProps) => {
           </Center>
         </Center>
       </HStack>
-      <GolfArray
-        course={course}
-        showCourseInfo={false}
-        extraData={userScoresData}
-      />
+      <GolfArray course={course} showCourseInfo={false}>
+        <UserScores userScores={finalScores} oppUid={oppUid} len={course.parArr.length} />
+      </GolfArray>
     </VStack>
   );
 });
@@ -152,11 +145,6 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
   const isMounted = useIsMounted();
   const [showHandicap, setShowHandicap] = useState(false);
 
-  const usersRowData = useUsersRowData({
-    usersStrokes: room?.usersStrokes ? room.usersStrokes : {},
-    course: golfCourse
-  });
-
   // to get room
   useEffect(() => {
     const unsubscribe = onSnapshot(roomRef, res => {
@@ -176,6 +164,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
     });
     return () => unsubscribe();
   }, []);
+
 
   // to handle game end
   useEffect(() => {
@@ -224,10 +213,10 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
     if (!room) return null;
     if (isSavedView) {
       return (
-        <HStack alignItems="center" justifyContent="space-between" shadow={1} marginX={3} marginY={2}>
+        <HStack alignItems="center" justifyContent="space-between" shadow={1} marginX={3} marginY={2} space={2}>
           <UsersBar userIds={room.userIds} />
           <TouchableOpacity onPress={() => setShowHandicap(!showHandicap)}>
-            <MaterialIcons name='info-outline' size={30} style={{ marginLeft: 5 }} />
+            <Fontisto name='spinner-rotate-forward' size={25}/>
           </TouchableOpacity>
         </HStack>
       );
@@ -306,10 +295,9 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
             <Center padding={5} rounded={20} bg={'white'} marginBottom={5}>
               <Text fontSize={18} fontWeight={'semibold'} marginBottom={3}>All Strokes</Text>
               <LoadingView isLoading={courseIsLoading}>
-                <GolfArray
-                  course={golfCourse}
-                  extraData={usersRowData}
-                />
+                <GolfArray course={golfCourse}>
+                  <UsersRow usersStrokes={room?.usersStrokes ? room.usersStrokes : {}} course={golfCourse} />
+                </GolfArray>
               </LoadingView>
             </Center>
           </ScrollView>

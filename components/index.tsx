@@ -1,7 +1,7 @@
 import RoomDetails from "./RoomDetails";
 import UserAvatar from "./UserAvatar";
 import UsersBar from "./UsersBar";
-import { GolfArray, getUserRowData, useUsersRowData, useUserScoresData } from "./GolfArray";
+import { GolfArray, UserRow, UsersRow, UserScores } from "./GolfArray";
 import ConfirmModal from "./ConfirmModal";
 import BackButton from "./BackButton";
 import Header from "./Header";
@@ -16,15 +16,16 @@ import {
   CachedImageProps,
   setDefaultImageCache,
 } from './CachedImage';
+import Defer from "./Defer";
 
 export {
   RoomDetails,
   UserAvatar,
   UsersBar,
   GolfArray,
-  getUserRowData,
-  useUsersRowData,
-  useUserScoresData,
+  UserRow,
+  UsersRow,
+  UserScores,
   ConfirmModal,
   BackButton,
   Header,
@@ -37,4 +38,5 @@ export {
   CachedImage,
   CachedImageProps,
   setDefaultImageCache,
+  Defer
 };
