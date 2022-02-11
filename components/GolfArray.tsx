@@ -1,11 +1,12 @@
 import _ from 'lodash';
-import React, { useCallback, useMemo } from 'react';
-import { HStack, Center, Text, Box, ScrollView, VStack, Spinner, FlatList } from 'native-base';
+import React, { useCallback, useMemo, useState } from 'react';
+import { HStack, Center, Text, Box, ScrollView, VStack, Spinner, FlatList, Input, Button } from 'native-base';
 import { GolfCourse, GolfStrokes, Stroke } from '../types';
 import { getColor, getColorType, padArr } from '../utils';
 import { useUser } from '../hooks/useFireGet';
-import { useAppSelector } from '../hooks/selectorAndDispatch';
+import { useAppDispatch, useAppSelector } from '../hooks/selectorAndDispatch';
 import Defer from './Defer';
+import { editCustomGolfCourseTile, setCustomGolfCourseArrLen } from '../redux/features/golfCourses';
 
 interface TileProps {
   num: Stroke | string;
@@ -17,6 +18,75 @@ interface TileProps {
 
 const Tile = React.memo(({ num, color, style }: TileProps) => {
   return <Center width="30" height="30" bg={color} style={style}>{num}</Center>;
+});
+
+interface EditableTileProps extends TileProps {
+  editableInfo: {
+    arrName: 'parArr' | 'handicapIndexArr';
+    idx: number;
+  };
+}
+
+const EditableTile = React.memo(({ color, style, editableInfo }: EditableTileProps) => {
+  const customGolfCourse = useAppSelector(state => state.golfCourses.customGolfCourse);
+  const dispatch = useAppDispatch();
+
+  const { arrName, idx } = editableInfo;
+  const num = customGolfCourse[arrName][idx];
+
+  return (
+    <Center width="30" height="30" bg={color} style={style}>
+      <Input
+        bg='red.100'
+        value={typeof num === 'number' ? num.toString() : undefined}
+        onChangeText={(text) => dispatch(editCustomGolfCourseTile({ arrName, idx, val: Number(text) }))}
+        keyboardType={'number-pad'}
+      />
+    </Center>
+  );
+});
+
+export const EditableGolfArray = React.memo(() => {
+  const customGolfCourse = useAppSelector(state => state.golfCourses.customGolfCourse);
+
+  const numOfHoles = customGolfCourse.parArr.length;
+  const res: FormatRowToTileDataProps[] = [
+    {
+      text: 'Hole',
+      arr: Array.from({ length: numOfHoles }, (_, i) => i + 1),
+      arrType: 'Hole',
+      style: {
+        marginBottom: 10
+      }
+    },
+    {
+      text: 'Par',
+      arr: customGolfCourse.parArr,
+      arrType: 'Par',
+    },
+    {
+      text: 'Handicap',
+      arr: customGolfCourse.handicapIndexArr,
+      arrType: 'Handicap',
+      style: {
+        marginBottom: 10
+      }
+    }
+  ];
+
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
+      horizontal
+    >
+      <VStack>
+        <Row data={res[0]} />
+        <Row data={res[1]} arrName='parArr' isEditable={true} />
+        <Row data={res[2]} arrName='handicapIndexArr' isEditable={true} />
+      </VStack>
+    </ScrollView>
+  );
 });
 
 type ArrType = 'Stroke' | 'Bet' | 'Par' | 'Hole' | 'Handicap';
@@ -156,13 +226,6 @@ export const UserScores = ({ userScores, oppUid, len }: UserScoresProps) => {
   return <Row data={userScoresData} />;
 };
 
-interface GolfArrayProps {
-  course: GolfCourse | undefined;
-  showCourseInfo?: boolean;
-  // extraData?: FormatRowToTileDataProps[];
-  children?: React.ReactNode;
-};
-
 // I've tried so many ways to fix the garbage performance of this, turns out the issue is that rendering new UI will not be memoized lol so when showing and hiding it kills everything
 // rewrote the whole thing to use flatlist but still not improvement
 interface Label {
@@ -176,7 +239,13 @@ const Label = React.memo(({ text, style }: Label) => {
   return <Text numberOfLines={1} width={110} height={30} textAlign='right' paddingRight={2} style={style}>{text}</Text>
 });
 
-const Row = React.memo(({ data }: { data: FormatRowToTileDataProps }) => {
+interface RowProps {
+  data: FormatRowToTileDataProps;
+  arrName?: 'parArr' | 'handicapIndexArr';
+  isEditable?: boolean;
+}; 
+
+const Row = React.memo(({ data, arrName, isEditable=false }: RowProps) => {
   const { text, style, ...withoutText } = data;
   const labelProps = { text, style };
   const rowData = formatRowToTileData({ ...withoutText, style });
@@ -184,11 +253,29 @@ const Row = React.memo(({ data }: { data: FormatRowToTileDataProps }) => {
     <HStack>
       <Label {...labelProps} />
       <Defer chunkSize={9}>
-        {rowData.map((tileData, idx) => <Tile key={idx} {...tileData} />)}
+        {rowData.map((tileData, idx) =>
+          isEditable && arrName
+            ? <EditableTile
+              key={idx}
+              {...tileData}
+              editableInfo={{ arrName, idx }}
+            />
+            : <Tile
+              key={idx}
+              {...tileData}
+            />)}
       </Defer>
     </HStack>
   );
 });
+
+interface GolfArrayProps {
+  course: GolfCourse | undefined;
+  showCourseInfo?: boolean;
+  // extraData?: FormatRowToTileDataProps[];
+  children?: React.ReactNode;
+  isEditable?: boolean;
+};
 
 export const GolfArray = React.memo(({ course, showCourseInfo = true, children }: GolfArrayProps) => {
   if (!course) return null;

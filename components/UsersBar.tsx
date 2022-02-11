@@ -20,26 +20,27 @@ const UsersBar = React.memo(({ userIds, size, limit }: UsersBarProps) => {
       bg='white'
     >
       {/* <Avatar.Group size="md"> */}
-        {userIds.length !== 0
-          ? userIds.slice(0, limit ? limit : undefined).map((userId, i) =>
-            <UserAvatar
-              key={userId}
-              userId={userId}
-              marginRight={i == userIds.length - 1 ? 0 : (size && size == "sm") ? -2 : -3}
-              zIndex={-i}
-              size={size}
-            />
-          )
-          : <Spinner size="sm" />
-        }
-        {limit && userIds.length && userIds.length - limit > 0
-          ? <Avatar size={size ? size : "md"} zIndex={-99}>{`+${userIds.length - limit}`}</Avatar>
-          : null}
+      {userIds.length !== 0
+        ? userIds.slice(0, limit ? limit : undefined).map((userId, i) =>
+          <UserAvatar
+            key={userId}
+            userId={userId}
+            marginRight={i == userIds.length - 1 ? 0 : (size && size == "sm") ? -2 : -3}
+            zIndex={-i}
+            size={size}
+          />
+        )
+        : <Spinner size="sm" />
+      }
+      {limit && userIds.length && userIds.length - limit > 0
+        ? <Avatar size={size ? size : "md"} zIndex={-99}>{`+${userIds.length - limit}`}</Avatar>
+        : null}
       {/* </Avatar.Group> */}
     </ScrollView>
   );
-}, (prevProps, nextProps) => {
-  return _.isEqual(prevProps.userIds, nextProps.userIds);
 });
+// , (prevProps, nextProps) => {
+//   return _.isEqual(prevProps.userIds, nextProps.userIds);
+// });
 
 export default UsersBar;

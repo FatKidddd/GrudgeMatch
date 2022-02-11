@@ -124,6 +124,7 @@ export interface HandicapInfo {
 
 export interface GolfGame extends Room {
   golfCourseId?: string;
+  isCustomGolfCourseId?: boolean;
 
   usersStrokes: {
     [userId: string]: GolfStrokes;
@@ -143,9 +144,9 @@ export interface GolfGame extends Room {
 
 export interface GolfCourse {
   id: string;
-  location: string;
+  location?: string;
   name: string;
-  clubName: string;
+  clubName?: string;
   parArr: Array<number>;
   handicapIndexArr: Array<number>;
 };

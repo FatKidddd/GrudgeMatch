@@ -135,9 +135,7 @@ interface InputBoxProps {
 };
 
 const InputBox = ({ room, roomName, golfCourse, userId, holeNumber, setShowTransitionScoreboard, isMounted }: InputBoxProps) => {
-  const existingStrokeCount = room.usersStrokes[userId][holeNumber - 1];
-  
-  const [inputVal, setInputVal] = useState(existingStrokeCount ? existingStrokeCount : golfCourse?.parArr[holeNumber - 1]);
+  const [inputVal, setInputVal] = useState(golfCourse?.parArr[holeNumber - 1]);
   const [inputLoading, setInputLoading] = useState(false);
   
   useEffect(() => {
@@ -275,7 +273,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
   const [showHandicap, setShowHandicap] = useState(false);
   const [holeNumber, setHoleNumber] = useState(1);
 
-  const numberOfCompletedStrokes = room && userId ? room.usersStrokes[userId].filter(e => !!e).length : 0;
+  const numberOfCompletedStrokes = room && userId && room.usersStrokes[userId] ? room.usersStrokes[userId].filter(e => !!e).length : 0;
   useEffect(() => {
     if (!room || !userId) return;
     setHoleNumber(getUserHoleNumber(room.usersStrokes[userId]));
@@ -404,7 +402,6 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
       </Center>
     );
   };
-
 
   const childProps = { room, roomName, golfCourse: golfCourse as GolfCourse, userId, holeNumber, setShowTransitionScoreboard, isMounted };
 

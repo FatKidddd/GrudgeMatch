@@ -23,13 +23,17 @@ const RoomModalButtons = () => {
   const [password, setPassword] = useState("");
   const [errorIsOpen, setErrorIsOpen] = useState(false);
   const [createOrJoin, setCreateOrJoin] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
   const cancelRef = useRef(null);
 
   const db = getFirestore();
 
   const onClose = () => setErrorIsOpen(false);
   
-  const handleRoomError = () => setErrorIsOpen(true);
+  const handleRoomError = (message: string = 'Failed to create / join room') => {
+    setErrorMessage(message);
+    setErrorIsOpen(true);
+  };
 
   const createRoomChecks = () => {
     if (!(roomName.length > 0 && roomName.length < 30)) return false;
@@ -45,7 +49,7 @@ const RoomModalButtons = () => {
     // check for existing roomName
     getDoc(roomRef)
       .then(res => {
-        if (res.exists()) return handleRoomError();
+        if (res.exists()) return handleRoomError('Room already exists\nChoose another room name');
 
         // create room
         const auth = getAuth();
@@ -159,7 +163,7 @@ const RoomModalButtons = () => {
       >
         <AlertDialog.Content>
           <AlertDialog.CloseButton />
-          <AlertDialog.Header>Failed to create/join room</AlertDialog.Header>
+          <AlertDialog.Header>{errorMessage}</AlertDialog.Header>
           <AlertDialog.Footer>
             <Button.Group space={2}>
               <Button

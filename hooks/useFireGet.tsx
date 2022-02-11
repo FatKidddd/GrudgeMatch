@@ -15,9 +15,10 @@ type UseFireGetProps<T> = {
   itemId: string | void;
   toDispatch: ActionCreatorWithPayload<T, string>;
   textLog: string;
+  altDocRef?: DocumentReference<DocumentData> | void;
 };
 
-const useFireGet = <T,>({ docRef, items, itemId, toDispatch, textLog }: UseFireGetProps<T>): [T | undefined, boolean] => {
+const useFireGet = <T,>({ docRef, items, itemId, toDispatch, textLog, altDocRef }: UseFireGetProps<T>): [T | undefined, boolean] => {
   const [isLoading, setIsLoading] = useState(false);
   const isMounted = useIsMounted();
   const dispatch = useAppDispatch();
@@ -35,11 +36,16 @@ const useFireGet = <T,>({ docRef, items, itemId, toDispatch, textLog }: UseFireG
         if (itemId && !items[itemId] && !isLoading && !!docRef) {
           setIsLoading(true);
           try {
-            const res = await getDoc(docRef);
+            let res = await getDoc(docRef);
+            if (!res.exists() && altDocRef && isMounted.current) {
+              console.log('Using altDocRef');
+              res = await getDoc(altDocRef);
+            }
             const data = {
               id: res.id,
               ...res.data()
             } as unknown as T;
+            if (!isMounted.current) return;
             formatData(data);
             dispatch(toDispatch(data));
             console.log(`Got ${textLog} data with id ${itemId}`);
@@ -77,13 +83,14 @@ const getMutex = (id: string) => {
 
 export const useGolfCourse = (golfCourseId: string | void) => {
   const db = getFirestore();
-  const golfCourses = useAppSelector(state => state.golfCourses);
+  const golfCourses = useAppSelector(state => state.golfCourses.cache);
   return useFireGet({
     docRef: !!golfCourseId ? doc(db, 'golfCourses', golfCourseId) : undefined,
     items: golfCourses,
     itemId: golfCourseId,
     toDispatch: setGolfCourse,
     textLog: 'golfCourse',
+    altDocRef: !!golfCourseId ? doc(db, 'customGolfCourses', golfCourseId) : undefined,
   })
 };
 

@@ -283,7 +283,7 @@ const CachedImage = ({
   const options = {debug, ..._options};
 
   // If we don't have a progress indicator, no reason to set the progress and trigger state updates.
-  const onProgress = ProgressIndicatorComponent ? setProgress : undefined;
+  const onProgress = ProgressIndicatorComponent && mountedRef.current ? setProgress : undefined;
 
   const onError = (error: Error) => {
     _onError?.({nativeEvent: {error}});
@@ -324,6 +324,7 @@ const CachedImage = ({
   );
 
   const setCachedUri = (u: string) => {
+    if (!mountedRef.current) return;
     _setCachedUri(u);
     debug?.(`Setting cached uri preview: ${u}`);
     if (!cachedUri) {

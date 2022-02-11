@@ -5,20 +5,18 @@ import { Provider } from 'react-redux';
 import { NativeBaseProvider, extendTheme } from "native-base";
 import useCachedResources from './hooks/useCachedResources';
 import Navigation from './navigation';
-// Import the functions you need from the SDKs you need
-import { StatusBar, LogBox } from 'react-native';
+import { LogBox } from 'react-native';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
-
-LogBox.ignoreLogs(['Setting a timer for a long period of time'])
-
 import { initializeApp } from "firebase/app";
 // import { initializeAuth } from 'firebase/auth';
 // import { getReactNativePersistence } from 'firebase/auth/react-native';
-
 import { SSRProvider } from '@react-aria/ssr';
 import { initializeFirestore } from "firebase/firestore"; 
-
+// @ts-ignore
 import { connectToDevTools } from "react-devtools-core";
+import * as Sentry from 'sentry-expo';
+
+LogBox.ignoreLogs(['Setting a timer for a long period of time'])
 
 if (__DEV__) {
   connectToDevTools({
@@ -26,6 +24,20 @@ if (__DEV__) {
     port: 8097,
   });
 }
+
+
+Sentry.init({
+  dsn: 'https://d31ec085382e42eaacb1b149685ab924@o1140567.ingest.sentry.io/6197877',
+  enableInExpoDevelopment: true,
+  debug: true, // If `true`, Sentry will try to print out useful debugging information if something goes wrong with sending the event. Set it to `false` in production
+});
+
+// // Access any @sentry/react-native exports via:
+// Sentry.Native.*
+
+// // Access any @sentry/browser exports via:
+// Sentry.Browser.*
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyArYG40JyZ01TC1fC464x-VJ9_j2_5Bjl4",

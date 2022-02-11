@@ -1,15 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { updateDoc, getDocs, getFirestore, collection, doc, DocumentSnapshot, DocumentData, query, limit, startAfter, orderBy } from 'firebase/firestore';
+import { updateDoc, getDocs, getFirestore, collection, doc, DocumentSnapshot, DocumentData, query, limit, startAfter, orderBy, addDoc, setDoc, CollectionReference } from 'firebase/firestore';
 import { GolfCourse, GolfGame } from '../../../types';
-import { Box, FlatList, Text, Center, Button, Input, HStack, ScrollView, Spinner, KeyboardAvoidingView } from "native-base";
+import { Box, FlatList, Text, Center, Button, Input, HStack, ScrollView, Spinner, KeyboardAvoidingView, VStack } from "native-base";
 import { TouchableOpacity } from 'react-native';
-import { AntDesign, Fontisto, Ionicons } from '@expo/vector-icons';
-import { Defer, GolfArray, LoadingView, UserAvatar } from '../../../components';
+import { AntDesign, Fontisto, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { BackButton, Defer, GolfArray, LoadingView, UserAvatar } from '../../../components';
 import { useGolfCourse, useUser } from '../../../hooks/useFireGet';
-import { useAppDispatch } from '../../../hooks/selectorAndDispatch';
-import { tryAsync } from '../../../utils';
-import { addGolfCourses } from '../../../redux/features/golfCourses';
+import { useAppDispatch, useAppSelector } from '../../../hooks/selectorAndDispatch';
+import { padArr, tryAsync } from '../../../utils';
+import { addGolfCourses, setCustomGolfCourseArrLen } from '../../../redux/features/golfCourses';
 import { useIsMounted } from '../../../hooks/common';
+import uuid from 'react-native-uuid';
+import { EditableGolfArray } from '../../../components/GolfArray';
 
 interface CourseViewProps {
   golfCourseId: string;
@@ -18,31 +20,48 @@ interface CourseViewProps {
 }
 
 const CourseView = React.memo(({ golfCourseId, setSelectedCourseId, isSelected }: CourseViewProps) => {
-  console.log('render courseview')
+  // console.log('render courseview')
   const [golfCourse, golfCourseIsLoading] = useGolfCourse(golfCourseId);
   if (!golfCourse) return null;
   const handleOnPress = () => setSelectedCourseId(isSelected ? '' : golfCourse.id);
   return (
-    <Box padding={15} bgColor={'white'} shadow={3} rounded={20} marginBottom={3}>
-      <LoadingView isLoading={golfCourseIsLoading}>
-        <HStack justifyContent={'space-between'} alignItems={'center'} marginBottom={1}>
-          <Box flex={1}>
-            <Text fontSize={18} fontWeight={'semibold'}>{golfCourse.name}</Text>
+    <Defer chunkSize={1}>
+      <Box padding={15} bgColor={'white'} shadow={3} rounded={20} marginBottom={3}>
+        <LoadingView isLoading={golfCourseIsLoading}>
+          <HStack justifyContent={'space-between'} alignItems={'center'} marginBottom={1}>
+            <Box flex={1}>
+              <Text fontSize={18} fontWeight={'semibold'}>{golfCourse.name}</Text>
+            </Box>
+            <TouchableOpacity onPress={handleOnPress}>
+              <AntDesign name={isSelected ? 'checkcircle' : 'checkcircleo'} size={30} color={isSelected ? 'green' : 'gray'} />
+            </TouchableOpacity>
+          </HStack>
+          <Box width={'100%'} alignItems={'flex-start'} marginBottom={3}>
+            <Text>{golfCourse.location}</Text>
           </Box>
-          <TouchableOpacity onPress={handleOnPress}>
-            <AntDesign name={isSelected ? 'checkcircle' : 'checkcircleo'} size={30} color={isSelected ? 'green' : 'gray'} />
-          </TouchableOpacity>
-        </HStack>
-        <Box width={'100%'} alignItems={'flex-start'} marginBottom={3}>
-          <Text>{golfCourse.location}</Text>
-        </Box>
-        <GolfArray course={golfCourse} />
-      </LoadingView>
-    </Box>
+          <GolfArray course={golfCourse} />
+        </LoadingView>
+      </Box>
+    </Defer>
   );
 });
 
-const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
+const addCoursesFromJson = () => {
+  // console.log(json);
+  // console.log("hi")
+  // const colRef = collection(db, 'golfCourses');
+  // let json = require('./data.json');
+  // for (const obj of json) {
+  //   // console.log(obj)
+  //   addDoc(colRef, obj);
+  // }
+};
+
+interface GolfCourseListProps extends GolfPrepScreenProps {
+  golfCoursesRef: CollectionReference<DocumentData>;
+};
+
+const GolfCourseList = ({ userId, roomName, room, golfCoursesRef }: GolfCourseListProps)  => {
   const [golfCourseIds, setGolfCourseIds] = useState<Array<string>>([]);
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [lastVisible, setLastVisible] = useState<DocumentSnapshot<DocumentData> | null | undefined>();
@@ -52,44 +71,23 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
+    // if golfCoursesRef changes from default to custom or vice versa
+    if (!isMounted.current) return;
+    setGolfCourseIds([]);
+    setSelectedCourseId('');
+    setLastVisible(null);
+    setNoMore(false);
+    setLoading(false);
+
     getGolfCourses();
-    // addCoursesFromJson();
-  }, []);
+  }, [golfCoursesRef]);
 
   const db = getFirestore();
-
-  const addCourse = () => {
-    const colRef = collection(db, 'golfCourses');
-    // addDoc(colRef, {
-    //   name: "ass",
-    //   location: "penis",
-    //   parArr: [4, 4, 5, 3, 4, 4, 3, 4, 5, 4, 3, 4, 5, 5, 4, 4, 3, 4],
-    //   handicapIndexArr: [12, 4, 2, 16, 8, 10, 18, 14, 6, 5, 15, 1, 11, 7, 17, 9, 13, 3],
-    // });
-  };
-
-  const addCoursesFromJson = () => {
-    // console.log(json);
-    // console.log("hi")
-    // const colRef = collection(db, 'golfCourses');
-    // let json = require('./data.json');
-    // for (const obj of json) {
-    //   // console.log(obj)
-    //   addDoc(colRef, obj);
-    // }
-    // addDoc(colRef, {
-    //   name: "ass",
-    //   location: "penis",
-    //   parArr: [4, 4, 5, 3, 4, 4, 3, 4, 5, 4, 3, 4, 5, 5, 4, 4, 3, 4],
-    //   handicapIndexArr: [12, 4, 2, 16, 8, 10, 18, 14, 6, 5, 15, 1, 11, 7, 17, 9, 13, 3],
-    // });
-  };
 
   const getGolfCourses = async () => {
     if (loading || userId !== room.gameOwnerUserId || !isMounted.current) return;
     setLoading(true);
 
-    const golfCoursesRef = collection(db, 'golfCourses');
     const q = lastVisible == undefined
       ? query(golfCoursesRef, orderBy("name"), limit(2))
       : query(golfCoursesRef, orderBy("name"), startAfter(lastVisible), limit(2));
@@ -106,10 +104,6 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
 
       // if (!isMounted.current) return;
       dispatch(addGolfCourses(newGolfCourses));
-
-      // newGolfCourses.forEach(newGolfCourse => {
-      //   dispatch(setGolfCourse(newGolfCourse));
-      // });
 
       // update lastVisible
       const newLastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
@@ -130,7 +124,7 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
   };
 
   const handleSubmit = () => {
-    if (selectedCourseId.length === 0) return;
+    if (!selectedCourseId || selectedCourseId.length === 0) return;
     updateDoc(doc(db, 'rooms', roomName), {
       golfCourseId: selectedCourseId
     })
@@ -152,19 +146,18 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
     <>
       {userId === room.gameOwnerUserId
         ? <Box flex={1} marginBottom={5}>
-          <Center width='100%' padding={1} rounded={20} bgColor={'white'} marginY={3}>
-            <Text fontSize={18} fontWeight="500">Select course</Text>
-          </Center>
+            {/* <Text fontSize={18} fontWeight="500">Select a course</Text> */}
           <Box flex={1} marginBottom={3}>
             <FlatList
               data={golfCourseIds}
               renderItem={renderItem}
               keyExtractor={(item, i) => item + i}
               onEndReached={onEndReached}
-              onEndReachedThreshold={0.5}
-              initialNumToRender={3}
+              onEndReachedThreshold={0.3}
+              initialNumToRender={2}
               ListFooterComponent={renderFooter}
               removeClippedSubviews={true}
+              showsVerticalScrollIndicator={false}
             />
           </Box>
           <Box>
@@ -173,14 +166,139 @@ const GolfCourseScreen = ({ userId, roomName, room }: GolfPrepScreenProps)  => {
         </Box>
         : <Center flex={1}>
           <Text>Wait for room owner to select course</Text>
-        </Center>
-      }
+        </Center>}
     </>
   );
 };
 
+const GolfCourseScreen = ({ ...props }: GolfPrepScreenProps) => {
+  const [showCustomCourses, setShowCustomCourses] = useState(false);
+  const [showAddCourse, setShowAddCourse] = useState(false);
+
+  const db = getFirestore();
+  const golfCoursesRef = showCustomCourses
+    ? collection(db, 'users', props.userId, 'customGolfCourses')
+    : collection(db, 'golfCourses');
+
+  const toggleShowCustomCourses = () => setShowCustomCourses(!showCustomCourses);
+  const toggleShowAddCourse = () => setShowAddCourse(!showAddCourse);
+
+  return (
+    <Box flex={1}>
+      {/* <VStack space={3} width='100%' padding={1} rounded={20} bgColor={'white'} marginY={3} alignItems='center' justifyContent='space-between'> */}
+      <Button onPress={toggleShowCustomCourses} marginY={3} bg='emerald.500'>
+        {showCustomCourses ? 'View default courses' : 'View custom courses'}
+      </Button>
+        {/* <HStack width='100%' alignItems={'center'} justifyContent='space-between' marginX={3}>
+        <Text>Can't find your course?</Text>
+        <TouchableOpacity onPress={toggleShowAddCourse}>
+          <Ionicons name='add' size={30} />
+        </TouchableOpacity>
+</HStack> */}
+      {/* </VStack> */}
+
+      {!showAddCourse
+        ? <GolfCourseList
+          {...props}
+          golfCoursesRef={golfCoursesRef}
+          toggleShowCustomCourses={toggleShowCustomCourses}
+        />
+        : <GolfCourseAdder userId={props.userId} toggleShowAddCourse={toggleShowAddCourse} />}
+    </Box>
+  );
+};
+
+interface GolfCourseAdderProps {
+  userId: string;
+  toggleShowAddCourse: () => void;
+};
+
+const GolfCourseAdder = ({ userId, toggleShowAddCourse }: GolfCourseAdderProps) => {
+  const customGolfCourse = useAppSelector(state => state.golfCourses.customGolfCourse);
+  const dispatch = useAppDispatch();
+  const [errorMessage, setErrorMessage] = useState<string>();
+  const isMounted = useIsMounted();
+
+  const db = getFirestore();
+
+  const checkArr = (arr: any[], checkHandicap=false): [boolean, string] => {
+    if (!(arr.length > 0 && arr.length % 9 === 0)) return [false, 'Invalid length']; // should never happen
+    const allPositiveIntegers = arr.every(val => typeof val === 'number' && val > 0 && Number.isSafeInteger(val));
+    if (!allPositiveIntegers) return [false, 'Invalid number used'];
+    if (checkHandicap) {
+      const boolArr = new Array(arr.length).fill(false);
+      arr.forEach(num => {
+        const idx = num - 1;
+        if (idx >= 0 && idx < boolArr.length)
+          boolArr[idx] = true;
+      });
+      const handicapIsIota = boolArr.every(e => e);
+      return [handicapIsIota, !handicapIsIota ? 'HandicapIndex needs to contain every number from 1 to 9 or 18' : ''];
+    }
+    return [true, ''];
+  };
+
+  const checkString = (s: string | undefined, canBeUndefined=false): [boolean, string] => {
+    if (canBeUndefined && !s) return [true, ''];
+    const withinRange = s ? s.length > 0 && s.length <= 200 : false;
+    return [withinRange, !withinRange ? 'Name is a required field and cannot exceed 200 characters' : ''];
+  };
+
+  const checkCustomCourse = () => {
+    const { name, clubName, location, parArr, handicapIndexArr } = customGolfCourse;
+    const res = [
+      checkString(name),
+      checkString(clubName, true),
+      checkString(location, true),
+      checkArr(parArr),
+      checkArr(handicapIndexArr, true)
+    ];
+    return res.reduce(([prevCan, prevErr], [curCan, curErr]) =>
+      [prevCan && curCan, (prevErr.length ? prevErr + '\n' : '') + curErr]);
+  };
+
+  const addCustomCourse = async () => {
+    const [can, errMsg] = checkCustomCourse();
+    if (can) {
+      try {
+        // post 2 of the same object to diff directories in firestore, because the one in user doc will be used for infinite scroll, the other one is general
+        const uniqueId = uuid.v4() as string;
+
+        const customCourseRef = doc(db, 'customGolfCourses', uniqueId);
+        await setDoc(customCourseRef, customGolfCourse);
+
+        if (!isMounted.current) return;
+        const userCustomCourseRef = doc(db, 'users', userId, 'golfCourses', uniqueId); // this will contain all custom courses of user
+        await setDoc(userCustomCourseRef, customGolfCourse);
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      setErrorMessage(errMsg);
+    }
+  };
+
+  const handleOnPress = () => {
+    const curLen = customGolfCourse.parArr.length;
+    dispatch(setCustomGolfCourseArrLen(curLen === 9 ? 18 : 9));
+  };
+
+  return (
+    <VStack width='100%'>
+      <HStack width='100%' alignItems={'center'} justifyContent='space-between'>
+        <BackButton onPress={toggleShowAddCourse} />
+        <Button onPress={handleOnPress}>Toggle No. of Holes</Button>
+      </HStack>
+      <EditableGolfArray />
+      <Text>{errorMessage}</Text>
+      <Button onPress={addCustomCourse}>Submit</Button>
+    </VStack>
+  );
+};
+
+
 interface HandicapRowProps {
-  userId: string | undefined;
+  userId: string;
   oppUid: string;
   room: GolfGame;
   roomName: string;
@@ -386,7 +504,7 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
 };
 
 interface GolfPrepScreenProps {
-  userId: string | undefined;
+  userId: string;
   roomName: string;
   room: GolfGame;
 };

@@ -40,7 +40,19 @@
     },
     "jsEngine": "hermes",
     "plugins": [
-      "expo-community-flipper"
-    ]
+      "sentry-expo"
+    ],
+"hooks": {
+      "postPublish": [
+        {
+          "file": "sentry-expo/upload-sourcemaps",
+          "config": {
+            "organization": "justin-wong",
+            "project": "grudgematch",
+            "authToken": "8259bfb2b5a945148613a511a0b53cfd8843f2e2561e4264b9717c3f2ea245e6"
+          }
+        }
+      ]
+    }
   }
 }
