@@ -14,10 +14,13 @@ interface TileProps {
   style?: {
     [key: string]: any;
   };
+  size?: number;
 };
 
-const Tile = React.memo(({ num, color, style }: TileProps) => {
-  return <Center width="30" height="30" bg={color} style={style}>{num}</Center>;
+const Tile = React.memo(({ size=30, num, color, style }: TileProps) => {
+  return <Center size={size} style={style} bg={color}>
+    <Text fontSize={size > 30 ? 18 : 14}>{num}</Text>
+  </Center>;
 });
 
 interface EditableTileProps extends TileProps {
@@ -27,26 +30,27 @@ interface EditableTileProps extends TileProps {
   };
 }
 
-const EditableTile = React.memo(({ color, style, editableInfo }: EditableTileProps) => {
-  const customGolfCourse = useAppSelector(state => state.golfCourses.customGolfCourse);
+const EditableTile = React.memo(({ size=30, num, color, style, editableInfo }: EditableTileProps) => {
   const dispatch = useAppDispatch();
 
   const { arrName, idx } = editableInfo;
-  const num = customGolfCourse[arrName][idx];
 
   return (
-    <Center width="30" height="30" bg={color} style={style}>
+    <Center size={size} bg={color} style={style}>
       <Input
-        bg='red.100'
-        value={typeof num === 'number' ? num.toString() : undefined}
+        value={num ? num.toString() : undefined}
         onChangeText={(text) => dispatch(editCustomGolfCourseTile({ arrName, idx, val: Number(text) }))}
-        keyboardType={'number-pad'}
+        flex={1}
+        width='100%'
+        textAlign={'center'}
+        fontSize={size > 30 ? 18 : 14}
+        rounded={0}
       />
     </Center>
   );
 });
 
-export const EditableGolfArray = React.memo(() => {
+export const EditableGolfArray = React.memo(({ size }: { size?: number }) => {
   const customGolfCourse = useAppSelector(state => state.golfCourses.customGolfCourse);
 
   const numOfHoles = customGolfCourse.parArr.length;
@@ -81,9 +85,9 @@ export const EditableGolfArray = React.memo(() => {
       horizontal
     >
       <VStack>
-        <Row data={res[0]} />
-        <Row data={res[1]} arrName='parArr' isEditable={true} />
-        <Row data={res[2]} arrName='handicapIndexArr' isEditable={true} />
+        <Row data={res[0]} size={size}/>
+        <Row data={res[1]} arrName='parArr' isEditable={true} size={size}/>
+        <Row data={res[2]} arrName='handicapIndexArr' isEditable={true} size={size}/>
       </VStack>
     </ScrollView>
   );
@@ -99,6 +103,7 @@ interface FormatRowToTileDataProps {
   style?: {
     [key: string]: any;
   };
+  isEditable?: boolean;
 };
 
 const sumFrom = (arr: (number | null | undefined)[] | undefined, idx1: number, idx2: number) => {
@@ -110,7 +115,7 @@ const sumFrom = (arr: (number | null | undefined)[] | undefined, idx1: number, i
   return res;
 };
 
-const formatRowToTileData = ({ text, arr, arrType, comparisonArr, style }: FormatRowToTileDataProps) => {
+const formatRowToTileData = ({ text, arr, arrType, comparisonArr, style, isEditable=false }: FormatRowToTileDataProps) => {
   const sumIfInList = ['Stroke', 'Bet', 'Par'];
   const shouldSum = !!sumIfInList.find(e => e === arrType);
   const sumArr = [sumFrom(arr, 0, 9), sumFrom(arr, 9, 18)];
@@ -128,7 +133,8 @@ const formatRowToTileData = ({ text, arr, arrType, comparisonArr, style }: Forma
         arrType,
         compareNumber: comparisonArr ? comparisonArr[i] : undefined
       })),
-      style
+      style,
+      isEditable
     });
 
     // subtotal sum tile
@@ -143,7 +149,8 @@ const formatRowToTileData = ({ text, arr, arrType, comparisonArr, style }: Forma
         style: {
           ...style,
           marginHorizontal: 10
-        }
+        },
+        isEditable: false
       });
     }
   });
@@ -159,7 +166,8 @@ const formatRowToTileData = ({ text, arr, arrType, comparisonArr, style }: Forma
     style: {
       ...style,
       marginHorizontal: 10
-    }
+    },
+    isEditable: false
   });
 
   return res;
@@ -236,33 +244,36 @@ interface Label {
 };
 
 const Label = React.memo(({ text, style }: Label) => {
-  return <Text numberOfLines={1} width={110} height={30} textAlign='right' paddingRight={2} style={style}>{text}</Text>
+  return <Text marginTop={1} numberOfLines={1} width={110} height={30} textAlign='right' paddingRight={2} style={style}>{text}</Text>
 });
 
 interface RowProps {
   data: FormatRowToTileDataProps;
   arrName?: 'parArr' | 'handicapIndexArr';
   isEditable?: boolean;
+  size?: number;
 }; 
 
-const Row = React.memo(({ data, arrName, isEditable=false }: RowProps) => {
+const Row = React.memo(({ data, arrName, isEditable=false, size }: RowProps) => {
   const { text, style, ...withoutText } = data;
   const labelProps = { text, style };
-  const rowData = formatRowToTileData({ ...withoutText, style });
+  const rowData = formatRowToTileData({ ...withoutText, style, isEditable });
   return (
-    <HStack>
-      <Label {...labelProps} />
+    <HStack alignItems={'center'}>
+      <Label {...labelProps}/>
       <Defer chunkSize={9}>
         {rowData.map((tileData, idx) =>
-          isEditable && arrName
+          tileData.isEditable && arrName
             ? <EditableTile
               key={idx}
               {...tileData}
               editableInfo={{ arrName, idx }}
+              size={size}
             />
             : <Tile
               key={idx}
               {...tileData}
+              size={size}
             />)}
       </Defer>
     </HStack>
@@ -275,9 +286,10 @@ interface GolfArrayProps {
   // extraData?: FormatRowToTileDataProps[];
   children?: React.ReactNode;
   isEditable?: boolean;
+  size?: number;
 };
 
-export const GolfArray = React.memo(({ course, showCourseInfo = true, children }: GolfArrayProps) => {
+export const GolfArray = React.memo(({ course, showCourseInfo = true, children, size }: GolfArrayProps) => {
   if (!course) return null;
 
   const res: FormatRowToTileDataProps[] = useMemo(() => {

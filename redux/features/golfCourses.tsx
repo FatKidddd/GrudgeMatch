@@ -52,16 +52,20 @@ export const golfCoursesSlice = createSlice({
     setCustomGolfCourseArrLen: (state, action: PayloadAction<number>) => {
       const len = action.payload;
       let { parArr, handicapIndexArr } = state.customGolfCourse;
-      parArr = len === 9 ? parArr.slice(0, 9) : padArr(parArr, 18);
-      handicapIndexArr = len === 9 ? handicapIndexArr.slice(0, 9) : padArr(handicapIndexArr, 18);
+      state.customGolfCourse.parArr = len === 9 ? parArr.slice(0, 9) : padArr(parArr, 18);
+      state.customGolfCourse.handicapIndexArr = len === 9 ? handicapIndexArr.slice(0, 9) : padArr(handicapIndexArr, 18);
     },
     editCustomGolfCourseTile: (state, action: PayloadAction<{ arrName: 'parArr' | 'handicapIndexArr', idx: number, val: number }>) => {
       const { arrName, idx, val } = action.payload;
       state.customGolfCourse[arrName][idx] = val;
     },
+    editCustomGolfCourseField: (state, action: PayloadAction<{ fieldName: 'name' | 'clubName' | 'location', val: string }>) => {
+      const { fieldName, val } = action.payload;
+      state.customGolfCourse[fieldName] = val;
+    },
   },
 });
 
-export const { addGolfCourses, setGolfCourse, deleteGolfCourse, setCustomGolfCourseArrLen, editCustomGolfCourseTile } = golfCoursesSlice.actions;
+export const { addGolfCourses, setGolfCourse, deleteGolfCourse, setCustomGolfCourseArrLen, editCustomGolfCourseTile, editCustomGolfCourseField } = golfCoursesSlice.actions;
 
 export default golfCoursesSlice.reducer;

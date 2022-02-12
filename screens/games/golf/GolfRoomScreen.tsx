@@ -172,13 +172,13 @@ const InputBox = ({ room, roomName, golfCourse, userId, holeNumber, setShowTrans
   const decrement = () => inputVal <= 1 ? null : setInputVal(inputVal - 1);
 
   const par = golfCourse.parArr && holeNumber && holeNumber > 0 ? golfCourse.parArr[holeNumber - 1] : null;
-  let strokeDescription = null;
-  if (par) {
-    const diff = par - inputVal;
-    const diffArr = ['Par', 'Birdie', 'Eagle', 'Albatross', 'Condor'];
-    strokeDescription = diffArr[diff];
-    if (inputVal === 1) strokeDescription = 'Hole in One';
-  }
+  // let strokeDescription = null;
+  // if (par) {
+  //   const diff = par - inputVal;
+  //   const diffArr = ['Par', 'Birdie', 'Eagle', 'Albatross', 'Condor'];
+  //   strokeDescription = diffArr[diff];
+  //   if (inputVal === 1) strokeDescription = 'Hole in One';
+  // }
 
   let bg = par ? getColor(getColorType({ num: inputVal, arrType: 'Stroke', compareNumber: par })) : 'gray.100';
 
@@ -208,12 +208,12 @@ const InputBox = ({ room, roomName, golfCourse, userId, holeNumber, setShowTrans
             </TouchableOpacity>
           </HStack>
         </Box>
-        <HStack>
-          <Center flex={1}>
+        {/* <HStack> */}
+          {/* <Center flex={1}>
             <Text fontSize={18}>{strokeDescription}</Text>
-          </Center>
-          <Button marginRight={5} onPress={updateUserStrokes}>Done</Button>
-        </HStack>
+          </Center> */}
+          <Button alignSelf='flex-end' marginRight={5} onPress={updateUserStrokes}>Done</Button>
+        {/* </HStack> */}
       </Center>
     </LoadingView>
   );
@@ -408,12 +408,12 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
   return (
     <>
       {roomHeader}
-      <Box flex={1} width="100%" paddingX={15}>
+      <Box flex={1} width="100%" paddingX={3}>
         {/* check that room has a golf course and that all handicap between pairs has been chosen */}
         {room.golfCourseId && room.prepDone && !showHandicap
           ?
           <ScrollView flex={1} keyboardShouldPersistTaps={'always'}>
-            <Box bg={'white'} marginY={5} rounded={20} paddingY={3}>
+            <Box bg={'white'} rounded={20} paddingY={3} marginY={3}>
               <LoadingView isLoading={courseIsLoading}>
                 {golfCourse &&
                   (showTransitionScoreboard // golfcourse alr exists here

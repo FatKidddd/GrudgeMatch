@@ -66,6 +66,15 @@ initializeFirestore(app, {
 LogBox.ignoreLogs(['AsyncStorage has been extracted from react-native core and will be removed in a future release']); 
 
 const theme = extendTheme({
+  colors: {
+    main: {
+      '1': '#277699',
+      '2': '#52FFAE',
+      '3': '#118C53',
+      '4': '#D94530',
+      '5': '#21A351'
+    }
+  },
   components: {
     Button: {
       // baseStyle: ({ colorScheme }) => ({
@@ -76,11 +85,16 @@ const theme = extendTheme({
       // baseStyle: {
       //   font
       // },
+      // baseStyle: {
+      //   bg: '#66beb2'
+      // },
       defaultProps: {
         colorScheme: 'teal',
+        // bg: 'teal.500',
+        
         // variant: 'subtle'
         // _text: {
-        //   color: 'white'
+        //   color: 'gray.50'
         // }
       },
     },

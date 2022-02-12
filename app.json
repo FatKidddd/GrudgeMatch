@@ -42,7 +42,7 @@
     "plugins": [
       "sentry-expo"
     ],
-"hooks": {
+    "hooks": {
       "postPublish": [
         {
           "file": "sentry-expo/upload-sourcemaps",

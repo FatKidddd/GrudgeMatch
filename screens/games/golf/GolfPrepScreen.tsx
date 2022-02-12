@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { updateDoc, getDocs, getFirestore, collection, doc, DocumentSnapshot, DocumentData, query, limit, startAfter, orderBy, addDoc, setDoc, CollectionReference } from 'firebase/firestore';
 import { GolfCourse, GolfGame } from '../../../types';
-import { Box, FlatList, Text, Center, Button, Input, HStack, ScrollView, Spinner, KeyboardAvoidingView, VStack } from "native-base";
+import { Heading, FormControl, Box, FlatList, Text, Center, Button, Input, HStack, ScrollView, Spinner, KeyboardAvoidingView, VStack } from "native-base";
 import { TouchableOpacity } from 'react-native';
 import { AntDesign, Fontisto, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { BackButton, Defer, GolfArray, LoadingView, UserAvatar } from '../../../components';
 import { useGolfCourse, useUser } from '../../../hooks/useFireGet';
 import { useAppDispatch, useAppSelector } from '../../../hooks/selectorAndDispatch';
 import { padArr, tryAsync } from '../../../utils';
-import { addGolfCourses, setCustomGolfCourseArrLen } from '../../../redux/features/golfCourses';
+import { addGolfCourses, editCustomGolfCourseField, setCustomGolfCourseArrLen } from '../../../redux/features/golfCourses';
 import { useIsMounted } from '../../../hooks/common';
 import uuid from 'react-native-uuid';
 import { EditableGolfArray } from '../../../components/GolfArray';
@@ -75,12 +75,14 @@ const GolfCourseList = ({ userId, roomName, room, golfCoursesRef }: GolfCourseLi
     if (!isMounted.current) return;
     setGolfCourseIds([]);
     setSelectedCourseId('');
-    setLastVisible(null);
+    setLastVisible(undefined);
     setNoMore(false);
     setLoading(false);
-
-    getGolfCourses();
   }, [golfCoursesRef]);
+
+  useEffect(() => {
+    getGolfCourses();
+  }, [golfCourseIds.length === 0]);
 
   const db = getFirestore();
 
@@ -88,7 +90,7 @@ const GolfCourseList = ({ userId, roomName, room, golfCoursesRef }: GolfCourseLi
     if (loading || userId !== room.gameOwnerUserId || !isMounted.current) return;
     setLoading(true);
 
-    const q = lastVisible == undefined
+    const q = lastVisible === undefined
       ? query(golfCoursesRef, orderBy("name"), limit(2))
       : query(golfCoursesRef, orderBy("name"), startAfter(lastVisible), limit(2));
 
@@ -153,10 +155,10 @@ const GolfCourseList = ({ userId, roomName, room, golfCoursesRef }: GolfCourseLi
               renderItem={renderItem}
               keyExtractor={(item, i) => item + i}
               onEndReached={onEndReached}
-              onEndReachedThreshold={0.3}
+              onEndReachedThreshold={0.5}
               initialNumToRender={2}
               ListFooterComponent={renderFooter}
-              removeClippedSubviews={true}
+              // removeClippedSubviews={true}
               showsVerticalScrollIndicator={false}
             />
           </Box>
@@ -175,33 +177,32 @@ const GolfCourseScreen = ({ ...props }: GolfPrepScreenProps) => {
   const [showCustomCourses, setShowCustomCourses] = useState(false);
   const [showAddCourse, setShowAddCourse] = useState(false);
 
-  const db = getFirestore();
-  const golfCoursesRef = showCustomCourses
-    ? collection(db, 'users', props.userId, 'customGolfCourses')
-    : collection(db, 'golfCourses');
+  const golfCoursesRef = useMemo(() => {
+    const db = getFirestore();
+    return showCustomCourses
+      ? collection(db, 'users', props.userId, 'golfCourses')
+      : collection(db, 'golfCourses');
+  }, [showCustomCourses]);
 
   const toggleShowCustomCourses = () => setShowCustomCourses(!showCustomCourses);
   const toggleShowAddCourse = () => setShowAddCourse(!showAddCourse);
 
   return (
     <Box flex={1}>
-      {/* <VStack space={3} width='100%' padding={1} rounded={20} bgColor={'white'} marginY={3} alignItems='center' justifyContent='space-between'> */}
-      <Button onPress={toggleShowCustomCourses} marginY={3} bg='emerald.500'>
-        {showCustomCourses ? 'View default courses' : 'View custom courses'}
-      </Button>
-        {/* <HStack width='100%' alignItems={'center'} justifyContent='space-between' marginX={3}>
-        <Text>Can't find your course?</Text>
-        <TouchableOpacity onPress={toggleShowAddCourse}>
-          <Ionicons name='add' size={30} />
-        </TouchableOpacity>
-</HStack> */}
-      {/* </VStack> */}
+      {/* <VStack width='100%' padding={1} rounded={20} bgColor={'white'} marginY={3} alignItems='center' justifyContent='space-between'> */}
+      <HStack width='100%' alignItems={'center'} space={2}>
+        <Button onPress={toggleShowCustomCourses} marginY={3} bg='emerald.500' flex={1}>
+          {showCustomCourses ? 'View default' : 'View custom'}
+        </Button>
+        <Button onPress={toggleShowAddCourse} flex={1}>
+          Add custom
+        </Button>
+      </HStack>
 
       {!showAddCourse
         ? <GolfCourseList
           {...props}
           golfCoursesRef={golfCoursesRef}
-          toggleShowCustomCourses={toggleShowCustomCourses}
         />
         : <GolfCourseAdder userId={props.userId} toggleShowAddCourse={toggleShowAddCourse} />}
     </Box>
@@ -217,6 +218,7 @@ const GolfCourseAdder = ({ userId, toggleShowAddCourse }: GolfCourseAdderProps) 
   const customGolfCourse = useAppSelector(state => state.golfCourses.customGolfCourse);
   const dispatch = useAppDispatch();
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [isLoading, setIsLoading] = useState(false);
   const isMounted = useIsMounted();
 
   const db = getFirestore();
@@ -224,7 +226,7 @@ const GolfCourseAdder = ({ userId, toggleShowAddCourse }: GolfCourseAdderProps) 
   const checkArr = (arr: any[], checkHandicap=false): [boolean, string] => {
     if (!(arr.length > 0 && arr.length % 9 === 0)) return [false, 'Invalid length']; // should never happen
     const allPositiveIntegers = arr.every(val => typeof val === 'number' && val > 0 && Number.isSafeInteger(val));
-    if (!allPositiveIntegers) return [false, 'Invalid number used'];
+    if (!allPositiveIntegers) return [false, `Invalid values in ${checkHandicap ? 'handicap' : 'par'} cells`];
     if (checkHandicap) {
       const boolArr = new Array(arr.length).fill(false);
       arr.forEach(num => {
@@ -253,8 +255,10 @@ const GolfCourseAdder = ({ userId, toggleShowAddCourse }: GolfCourseAdderProps) 
       checkArr(parArr),
       checkArr(handicapIndexArr, true)
     ];
-    return res.reduce(([prevCan, prevErr], [curCan, curErr]) =>
-      [prevCan && curCan, (prevErr.length ? prevErr + '\n' : '') + curErr]);
+    return res.reduce(([prevCan, prevErr], [curCan, curErr]) => {
+      const spacer = (prevErr && prevErr.slice(prevErr.length - 1) !== '\n' ? '\n' : '');
+      return [prevCan && curCan, prevErr + spacer + curErr];
+    });
   };
 
   const addCustomCourse = async () => {
@@ -262,6 +266,7 @@ const GolfCourseAdder = ({ userId, toggleShowAddCourse }: GolfCourseAdderProps) 
     if (can) {
       try {
         // post 2 of the same object to diff directories in firestore, because the one in user doc will be used for infinite scroll, the other one is general
+        setIsLoading(true);
         const uniqueId = uuid.v4() as string;
 
         const customCourseRef = doc(db, 'customGolfCourses', uniqueId);
@@ -270,6 +275,9 @@ const GolfCourseAdder = ({ userId, toggleShowAddCourse }: GolfCourseAdderProps) 
         if (!isMounted.current) return;
         const userCustomCourseRef = doc(db, 'users', userId, 'golfCourses', uniqueId); // this will contain all custom courses of user
         await setDoc(userCustomCourseRef, customGolfCourse);
+        if (!isMounted.current) return;
+        setIsLoading(false);
+        console.log('Added custom course');
       } catch (err) {
         console.error(err);
       }
@@ -283,16 +291,47 @@ const GolfCourseAdder = ({ userId, toggleShowAddCourse }: GolfCourseAdderProps) 
     dispatch(setCustomGolfCourseArrLen(curLen === 9 ? 18 : 9));
   };
 
+  // console.log(customGolfCourse);
+
   return (
-    <VStack width='100%'>
-      <HStack width='100%' alignItems={'center'} justifyContent='space-between'>
-        <BackButton onPress={toggleShowAddCourse} />
-        <Button onPress={handleOnPress}>Toggle No. of Holes</Button>
-      </HStack>
-      <EditableGolfArray />
-      <Text>{errorMessage}</Text>
-      <Button onPress={addCustomCourse}>Submit</Button>
-    </VStack>
+    <KeyboardAvoidingView flex={1} behavior={'padding'}>
+      <ScrollView marginBottom={3} showsVerticalScrollIndicator={false}>
+        <VStack width='100%' padding={3} rounded={20} bg='white'>
+          <HStack width='100%' alignItems={'center'} marginBottom={3} justifyContent='space-between'>
+            <BackButton onPress={toggleShowAddCourse} />
+            <Heading textAlign={'center'} fontWeight='semibold'>Course Details</Heading>
+            <Box width={21} />
+          </HStack>
+          <FormControl>
+            <VStack space={3}>
+              <FormControl.Label>Name*</FormControl.Label>
+              <Input
+                value={customGolfCourse.name}
+                onChangeText={(val) => dispatch(editCustomGolfCourseField({ fieldName: 'name', val }))}
+              />
+              <FormControl.Label>Club Name</FormControl.Label>
+              <Input
+                value={customGolfCourse.clubName}
+                onChangeText={(val) => dispatch(editCustomGolfCourseField({ fieldName: 'clubName', val }))}
+              />
+              <FormControl.Label>Location</FormControl.Label>
+              <Input
+                value={customGolfCourse.location}
+                onChangeText={(val) => dispatch(editCustomGolfCourseField({ fieldName: 'location', val }))}
+              />
+              <VStack space={3} marginTop={3}>
+                <Button alignSelf='flex-end' onPress={handleOnPress}>Toggle No. of Holes</Button>
+                <EditableGolfArray size={50} />
+              </VStack>
+              <Text color='red.500'>{errorMessage}</Text>
+              {isLoading
+                ? <Spinner size='lg' />
+                : <Button onPress={addCustomCourse}>Submit</Button>}
+            </VStack>
+          </FormControl>
+        </VStack>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -490,16 +529,18 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
             />
           )}
         </Defer>
-        <Center>
-          <Text textAlign={'center'} marginY={3}>Make sure all players have joined the room before starting!</Text>
-          {userId === room.gameOwnerUserId
-            ? isReady
-              ? <Button onPress={handleStart}>Start game</Button>
-              : <Text>Make sure all give and takes are locked</Text>
-            : <Text>Wait for room owner to start game</Text>}
-        </Center>
-    </ScrollView>
-      </KeyboardAvoidingView>
+        {room.gameEnded
+          ? null
+          : <Center>
+            <Text textAlign={'center'} marginY={3}>Make sure all players have joined the room before starting!</Text>
+            {userId === room.gameOwnerUserId
+              ? isReady
+                ? <Button onPress={handleStart}>Start game</Button>
+                : <Text>Make sure all give and takes are locked</Text>
+              : <Text>Wait for room owner to start game</Text>}
+          </Center>}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

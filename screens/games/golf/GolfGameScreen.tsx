@@ -94,7 +94,7 @@ const RoomModalButtons = () => {
     getDoc(roomRef)
       .then(async res => {
         const data = res.data();
-        if (data?.password && data?.password === password) {
+        if ((data?.userIds && data?.userIds.length < 8) && data?.password && data?.password === password) {
           // update room
           await updateDoc(roomRef, {
             userIds: arrayUnion(userId),
@@ -234,40 +234,47 @@ const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
 
   const FINAL_SCORES_LIMIT = 4;
 
-  // there is a bug here where firebase get is called twice because UsersBar and FinalScoreTile both have useUser
+  const handleOnPress = () => setRoomNameDetailed(roomName);
   
   return (
-    <TouchableOpacity onPress={() => setRoomNameDetailed(roomName)} style={{ marginHorizontal: 10 }}>
-      <Box width={'100%'} rounded={20} bg={'white'} padding={4} marginBottom={5}>
-        <HStack justifyContent={'space-between'} alignItems={'center'} space={3} paddingBottom={2}>
+    <TouchableOpacity onPress={handleOnPress} style={{ marginHorizontal: 10 }}>
+      <VStack width={'100%'} rounded={20} bg={'white'} padding={4} marginBottom={3} space={2}>
+        <HStack justifyContent={'space-between'} alignItems={'center'} space={3}>
           {/* borderBottomWidth={1} borderColor={'gray.200'}> */}
-          <VStack width={70}>
+          <VStack width={100}>
             <Text fontWeight={'semibold'} numberOfLines={1}>{roomName}</Text>
             <Text fontWeight={'thin'} fontSize={12}>{new Date(room.dateCreated).toLocaleDateString()}</Text>
           </VStack>
           <UsersBar userIds={userIds} size="sm" limit={5}/>
         </HStack>
-        <HStack justifyContent={'space-evenly'} alignItems={'center'} marginTop={2}>
+        <Text fontSize={16} fontWeight='bold' numberOfLines={1}>{golfCourse.name}</Text>
+        <HStack justifyContent={'space-evenly'} alignItems={'center'}>
           {// limit to 4 long
-            _.zip(userIds, usersFinalScores).slice(0, FINAL_SCORES_LIMIT).map(([uid, userFinalScore]) => {
+            _.zip(userIds, usersFinalScores).slice(0, FINAL_SCORES_LIMIT).map(([uid, userFinalScore], idx) => {
               if (!uid || userFinalScore === undefined) return null;
-              return <FinalScoreTile key={uid} userId={uid} userFinalScore={userFinalScore} />;
+              return <FinalScoreTile key={uid} userId={uid} userFinalScore={userFinalScore} isUser={idx === 0}/>;
             })}
         </HStack>
-        <HStack marginTop={2} justifyContent={'flex-end'} alignItems={'center'}>
+        <HStack justifyContent={'flex-end'} alignItems={'center'}>
           <Text>{userIds.length > FINAL_SCORES_LIMIT ? `+${userIds.length - FINAL_SCORES_LIMIT} more` : null}</Text>
         </HStack>
-      </Box>
+      </VStack>
     </TouchableOpacity>
   );
 };
 
-const FinalScoreTile = ({ userId, userFinalScore }: { userId: string, userFinalScore: number }) => {
+interface FinalScoreTileProps {
+  userId: string;
+  userFinalScore: number;
+  isUser: boolean;
+};
+
+const FinalScoreTile = ({ userId, userFinalScore, isUser }: FinalScoreTileProps) => {
   const [user, userIsLoading] = useUser(userId);
   return (
     <Center width={70}>
       <LoadingView isLoading={userIsLoading} alignItems={'center'}>
-        <Text numberOfLines={1}>{user?.name}</Text>
+        <Text numberOfLines={1}>{isUser ? 'You' : user?.name}</Text>
         <Center bg={getColor(getColorType({ num: userFinalScore, arrType: 'Bet' }))} width={50} height={50} marginTop={3} rounded={10}>
           <Text fontSize={18} fontWeight={'semibold'}>{userFinalScore > 0 ? `+${userFinalScore}` : userFinalScore}</Text>
         </Center>
