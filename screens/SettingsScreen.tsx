@@ -134,7 +134,7 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
       if (!pickerResult.cancelled) {
         const manipResult = await manipulateAsync(pickerResult.uri, [
           {
-            resize: { height: 300, width: 300 },
+            resize: { width: 300 },
           },
         ]);
         const uploadUrl = await uploadImageAsync(manipResult.uri);

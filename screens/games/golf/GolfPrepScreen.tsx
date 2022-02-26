@@ -8,7 +8,7 @@ import { BackButton, Defer, GolfArray, LoadingView, UserAvatar } from '../../../
 import { useGolfCourse, useUser } from '../../../hooks/useFireGet';
 import { useAppDispatch, useAppSelector } from '../../../hooks/selectorAndDispatch';
 import { padArr, tryAsync } from '../../../utils';
-import { addGolfCourses, editCustomGolfCourseField, setCustomGolfCourseArrLen } from '../../../redux/features/golfCourses';
+import { addGolfCourses, editCustomGolfCourseField, resetCustomGolfCourse, setCustomGolfCourseArrLen } from '../../../redux/features/golfCourses';
 import { useIsMounted } from '../../../hooks/common';
 import uuid from 'react-native-uuid';
 import { EditableGolfArray } from '../../../components/GolfArray';
@@ -190,12 +190,14 @@ const GolfCourseScreen = ({ ...props }: GolfPrepScreenProps) => {
   return (
     <Box flex={1}>
       {/* <VStack width='100%' padding={1} rounded={20} bgColor={'white'} marginY={3} alignItems='center' justifyContent='space-between'> */}
-      <HStack width='100%' alignItems={'center'} space={2}>
-        <Button onPress={toggleShowCustomCourses} marginY={3} bg='emerald.500' flex={1}>
-          {showCustomCourses ? 'View default' : 'View custom'}
-        </Button>
+      <HStack width='100%' alignItems={'center'} space={2} paddingY={3}>
+        {showAddCourse
+          ? null
+          : <Button onPress={toggleShowCustomCourses} bg='emerald.500' flex={1}>
+            {showCustomCourses ? 'View default' : 'View custom'}
+          </Button>}
         <Button onPress={toggleShowAddCourse} flex={1}>
-          Add custom
+          {showAddCourse ? 'View courses' : 'Add custom'}
         </Button>
       </HStack>
 
@@ -277,6 +279,7 @@ const GolfCourseAdder = ({ userId, toggleShowAddCourse }: GolfCourseAdderProps) 
         await setDoc(userCustomCourseRef, customGolfCourse);
         if (!isMounted.current) return;
         setIsLoading(false);
+        dispatch(resetCustomGolfCourse());
         console.log('Added custom course');
       } catch (err) {
         console.error(err);
@@ -294,7 +297,7 @@ const GolfCourseAdder = ({ userId, toggleShowAddCourse }: GolfCourseAdderProps) 
   // console.log(customGolfCourse);
 
   return (
-    <KeyboardAvoidingView flex={1} behavior={'padding'}>
+    // <KeyboardAvoidingView flex={1} behavior={'padding'}>
       <ScrollView marginBottom={3} showsVerticalScrollIndicator={false}>
         <VStack width='100%' padding={3} rounded={20} bg='white'>
           <HStack width='100%' alignItems={'center'} marginBottom={3} justifyContent='space-between'>
@@ -330,8 +333,9 @@ const GolfCourseAdder = ({ userId, toggleShowAddCourse }: GolfCourseAdderProps) 
             </VStack>
           </FormControl>
         </VStack>
+        <Box height={400} />
       </ScrollView>
-    </KeyboardAvoidingView>
+    // </KeyboardAvoidingView>
   );
 };
 
@@ -361,8 +365,9 @@ const HandicapRow = React.memo(({ userId, oppUid, room, roomName, renderBackCoun
       locked: false
     };
 
+  // handicapInfo.give = pairId === 'BIslUXlGdQaOWDwW9x4X2oRtxvo1+QUMvGO7beZV9NRSRejsVIe5gk9B2' ? true : false;
   // console.log(handicapInfo)
-
+  
   useEffect(() => {
     setFrontVal(Number(handicapInfo.frontCount));
     setBackVal(Number(handicapInfo.backCount));
@@ -510,9 +515,9 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
 
   return (
     <KeyboardAvoidingView flex={1} behavior={'padding'}>
-      <ScrollView marginY={3} flex={1} keyboardShouldPersistTaps={'always'}>
+      <ScrollView marginY={3} flex={1} keyboardShouldPersistTaps={'always'} showsVerticalScrollIndicator={false}>
         <Center bg="white" padding={15} rounded={20} width="100%" flex={1}>
-          <Text fontSize={18} fontWeight="500">Handicap</Text>
+          <Text fontSize={18} fontWeight="500" mb="3">Handicap</Text>
           <LoadingView isLoading={courseIsLoading}>
             <GolfArray course={course} />
           </LoadingView>

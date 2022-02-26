@@ -107,6 +107,7 @@ interface FormatRowToTileDataProps {
 };
 
 const sumFrom = (arr: (number | null | undefined)[] | undefined, idx1: number, idx2: number) => {
+  // idx2 is exclusive
   let res = 0;
   if (!arr) return res;
   for (let i = idx1; i < Math.min(arr.length, idx2); i++)
@@ -262,19 +263,22 @@ const Row = React.memo(({ data, arrName, isEditable=false, size }: RowProps) => 
     <HStack alignItems={'center'}>
       <Label {...labelProps}/>
       <Defer chunkSize={9}>
-        {rowData.map((tileData, idx) =>
-          tileData.isEditable && arrName
+        {rowData.map((tileData, idx) => {
+          const actualIdx = idx - Math.floor(idx / 10); // hacky fix
+          // console.log(idx, actualIdx);
+          return tileData.isEditable && arrName
             ? <EditableTile
               key={idx}
               {...tileData}
-              editableInfo={{ arrName, idx }}
+              editableInfo={{ arrName, idx: actualIdx }}
               size={size}
             />
             : <Tile
               key={idx}
               {...tileData}
               size={size}
-            />)}
+            />
+        })}
       </Defer>
     </HStack>
   );

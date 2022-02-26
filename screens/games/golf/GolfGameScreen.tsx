@@ -200,13 +200,14 @@ interface RoomViewProps {
 // };
 
 const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
+  // console.log(index);
   const [room, roomIsLoading] = useRoom(roomName);
   const [golfCourse, golfCourseIsLoading] = useGolfCourse(room?.golfCourseId);
 
   if (!room || !room.userIds || !golfCourse) return null;
 
   const n = room.userIds.length;
-  const usersFinalScores: Array<number> = new Array(n).fill(0);
+  let usersFinalScores: Array<number> = new Array(n).fill(0);
 
   // swap user's and some random to make user's the first position (cannot mutate room so need to deepcopy below if you want)
   const userIds = room.userIds.slice();
@@ -231,6 +232,19 @@ const RoomView = ({ roomName, setRoomNameDetailed, userId }: RoomViewProps) => {
       usersFinalScores[i] += finalScore;
     }
   }
+
+  // let fakeName = `room${3 - index}`;
+  // let golfName;
+
+  // if (index === 1) {
+  //   golfName = 'Sembawang Country Club Golf Course';
+  //   usersFinalScores = [9, 21, -10, -20]
+  // } else if (index === 0) {
+  //   golfName = 'Changi Golf Club Golf Course';
+  //   usersFinalScores = [-15, 13, -9, 11]
+  // } else {
+  //   golfName = 'The Serapong';
+  // }
 
   const FINAL_SCORES_LIMIT = 4;
 
@@ -390,6 +404,7 @@ const GolfHistoryScreen = ({ navigation, userId }: GolfHistoryScreenProps) => {
               onEndReached={onEndReached}
               onEndReachedThreshold={0.5}
               ListFooterComponent={loading ? <Spinner size="sm" /> : null}
+              showsVerticalScrollIndicator={false}
             />
           </Box>}
     </Box>

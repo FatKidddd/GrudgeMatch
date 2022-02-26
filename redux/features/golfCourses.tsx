@@ -63,9 +63,18 @@ export const golfCoursesSlice = createSlice({
       const { fieldName, val } = action.payload;
       state.customGolfCourse[fieldName] = val;
     },
+    resetCustomGolfCourse: (state) => {
+      state.customGolfCourse = {
+        name: '',
+        clubName: '',
+        location: '',
+        parArr: new Array(18).fill(null),
+        handicapIndexArr: new Array(18).fill(null)
+      }
+    }
   },
 });
 
-export const { addGolfCourses, setGolfCourse, deleteGolfCourse, setCustomGolfCourseArrLen, editCustomGolfCourseTile, editCustomGolfCourseField } = golfCoursesSlice.actions;
+export const { addGolfCourses, setGolfCourse, deleteGolfCourse, setCustomGolfCourseArrLen, editCustomGolfCourseTile, editCustomGolfCourseField, resetCustomGolfCourse } = golfCoursesSlice.actions;
 
 export default golfCoursesSlice.reducer;

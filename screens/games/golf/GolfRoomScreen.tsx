@@ -100,7 +100,7 @@ const TransitionScoreboard = React.memo(({ userId, room, roomName, setShowTransi
           : null}
 
         <Center flex={1}>
-          <Text fontSize={18} fontWeight={'semibold'}>Betting Scores</Text>
+          <Text fontSize={18} fontWeight={'semibold'}>Scores</Text>
         </Center>
 
         {!room.gameEnded
@@ -299,7 +299,6 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
     return () => unsubscribe();
   }, []);
 
-
   // to handle game end
   useEffect(() => {
     if (!room || room.gameEnded || !golfCourse || !isMounted.current) return; // to only end game once
@@ -412,7 +411,7 @@ const GolfRoomScreen = ({ roomName, navigation, isSavedView }: GolfRoomScreenPro
         {/* check that room has a golf course and that all handicap between pairs has been chosen */}
         {room.golfCourseId && room.prepDone && !showHandicap
           ?
-          <ScrollView flex={1} keyboardShouldPersistTaps={'always'}>
+          <ScrollView flex={1} keyboardShouldPersistTaps={'always'} showsVerticalScrollIndicator={false}>
             <Box bg={'white'} rounded={20} paddingY={3} marginY={3}>
               <LoadingView isLoading={courseIsLoading}>
                 {golfCourse &&
