@@ -1,5 +1,4 @@
 import React from 'react';
-import { Pressable } from 'native-base';
 import { FontAwesome } from '@expo/vector-icons';
 import { TouchableOpacity } from 'react-native';
 
@@ -12,7 +11,7 @@ export default function BackButton({ onPress }: { onPress: () => void }) {
       <FontAwesome
         name="chevron-left"
         size={20}
-        style={{ marginRight: 15 }}
+        style={{ marginRight: 15, padding: 5 }}
       />
     </TouchableOpacity>
   );

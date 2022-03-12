@@ -40,7 +40,7 @@ export type RootStackScreenProps<Screen extends keyof RootStackParamList> = Nati
 
 export type RootDrawerParamList = {
   Home: NavigatorScreenParams<HomeStackParamList> | undefined;
-  Profile: undefined;
+  Shop: undefined;
   Settings: undefined;
 };
 
@@ -67,6 +67,8 @@ export interface User {
   roomNames: {
     [gameId: string]: string;
   };
+  roomsLimit: number;
+  roomsUsed: number;
   imageUrl?: string;
   // collection pastGames 
     // with game / sportId as document 

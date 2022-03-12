@@ -1,9 +1,8 @@
 {
-  "main": "node_modules/expo/AppEntry.js",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "start": "expo start --dev-client",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "eject": "expo eject",
     "test": "jest --watchAll"
@@ -34,9 +33,10 @@
     "expo-community-flipper": "^44.0.1",
     "expo-constants": "~13.0.1",
     "expo-crypto": "~10.1.1",
-    "expo-dev-client": "~0.8.3",
+    "expo-dev-client": "~0.8.4",
+    "expo-dev-launcher": "^0.10.4",
     "expo-device": "^4.1.1",
-    "expo-file-system": "~13.1.2",
+    "expo-file-system": "~13.1.4",
     "expo-font": "~10.0.4",
     "expo-google-app-auth": "~8.3.0",
     "expo-image-manipulator": "~10.2.0",
@@ -58,6 +58,7 @@
     "react-native": "0.64.3",
     "react-native-flipper": "^0.131.1",
     "react-native-gesture-handler": "~2.1.0",
+    "react-native-purchases": "^4.5.2",
     "react-native-reanimated": "~2.3.1",
     "react-native-safe-area-context": "3.3.2",
     "react-native-screens": "~3.10.1",
@@ -66,6 +67,7 @@
     "react-native-web": "0.17.1",
     "react-redux": "^7.2.6",
     "sentry-expo": "^4.0.5",
+    "sharp-cli": "^1.15.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
@@ -77,5 +79,7 @@
     "typescript": "~4.3.5"
   },
   "private": true,
-  "postinstall": "npx patch-package"
+  "postinstall": "npx patch-package",
+  "name": "GrudgeMatch",
+  "version": "1.0.0"
 }

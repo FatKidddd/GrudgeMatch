@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { store } from './redux/store';
 import { Provider } from 'react-redux';
 import { NativeBaseProvider, extendTheme } from "native-base";
 import useCachedResources from './hooks/useCachedResources';
 import Navigation from './navigation';
-import { LogBox } from 'react-native';
+import { Platform, LogBox } from 'react-native';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from "firebase/app";
 // import { initializeAuth } from 'firebase/auth';
@@ -15,6 +15,8 @@ import { initializeFirestore } from "firebase/firestore";
 // @ts-ignore
 import { connectToDevTools } from "react-devtools-core";
 import * as Sentry from 'sentry-expo';
+
+import Purchases from 'react-native-purchases';
 
 LogBox.ignoreLogs(['Setting a timer for a long period of time'])
 
@@ -105,14 +107,35 @@ const theme = extendTheme({
   }
 });
 
+const usePurchases = () => {
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      Purchases.setDebugLogsEnabled(true);
+      if (Platform.OS === 'ios') {
+        await Purchases.setup("public_ios_sdk_key");
+      } else if (Platform.OS === 'android') {
+        await Purchases.setup("goog_RmsPfLAzUwRclxkDyPKZyrpJDTK");
+        // // OR: if building for Amazon, be sure to follow the installation instructions then:
+        //   await Purchases.setup({ apiKey: "public_amazon_sdk_key", useAmazon: true });
+      }
+      setDone(true);
+    })();
+  }, []);
+
+  return done;
+};
+
 
 export default function App() {
-  const isLoadingComplete = useCachedResources();
-  
+  const loadedCachedResources = useCachedResources();
+  const loadedPurchases = usePurchases();
+
   // console.log(Application.applicationId)
   // console.log(Application.applicationName)
   // console.log(Constants.manifest)
-  if (!isLoadingComplete) return null;
+  if (!loadedCachedResources || !loadedPurchases) return null;
   return (
     <Provider store={store}>
       <SSRProvider>

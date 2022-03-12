@@ -17,6 +17,7 @@ import {
   setDefaultImageCache,
 } from './CachedImage';
 import Defer from "./Defer";
+import HamburgerButton from "./HamburgerButton";
 
 export {
   RoomDetails,
@@ -38,5 +39,6 @@ export {
   CachedImage,
   CachedImageProps,
   setDefaultImageCache,
-  Defer
+  Defer,
+  HamburgerButton
 };

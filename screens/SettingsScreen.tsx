@@ -3,7 +3,7 @@ import { Icon, Text, ScrollView, Center, Button, HStack, Switch, useColorMode, S
 import { RootDrawerScreenProps } from '../types';
 import * as ImagePicker from "expo-image-picker";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject,  } from "firebase/storage";
-import { LogBox, Platform } from "react-native";
+import { ImageBackground, LogBox, Platform } from "react-native";
 // import uuid from "react-native-uuid";
 import { getAuth } from 'firebase/auth';
 import { updateDoc, getFirestore, doc, deleteField } from 'firebase/firestore';
@@ -16,6 +16,7 @@ import { ConfirmModal, UserAvatar } from '../components';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { deleteUser } from '../redux/features/users';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import gamesData from '../gamesData';
 
 const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
   const [uploading, setUploading] = useState(false);
@@ -166,45 +167,53 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
   //   };
   // }
   return (
-    <>
-      <ScrollView marginTop={25}>
-        <Center>
-          {/* <Avatar {...avatarProps}>
+    <ImageBackground
+      source={gamesData['golf'].imagePath}
+      resizeMode="cover"
+      style={{ flex: 1, backgroundColor: '#eeeeee' }}
+      imageStyle={{ opacity: 0.4 }}
+    // blurRadius={10}
+    >
+      <>
+        <ScrollView marginTop={25} marginX={5}>
+          <Center bg='white' padding={5} rounded={20}>
+            {/* <Avatar {...avatarProps}>
             {getInitials(user.name)}
           </Avatar> */}
-          <UserAvatar userId={user.id} size="lg"/>
-          <HStack marginY={15} width={220} space={3}>
-            <Button
-              onPress={_pickImage}
-              leftIcon={<Icon as={MaterialCommunityIcons} name="pencil" size="sm" />}
-              flex={1}
+            <UserAvatar userId={user.id} size="lg" />
+            <HStack marginY={15} width={220} space={3}>
+              <Button
+                onPress={_pickImage}
+                leftIcon={<Icon as={MaterialCommunityIcons} name="pencil" size="sm" />}
+                flex={1}
               //colorScheme='blue'
-            >
-              Edit
-            </Button>
-            <Button
-              onPress={() => {
-                if (!user.imageUrl) return;
-                setDeleteIsOpen(true);
-              }}
-              leftIcon={<Icon as={MaterialCommunityIcons} name="delete" size="sm"/>}
-              colorScheme='red'
-              flex={1}
-            >
-              Delete
-            </Button>
-          </HStack>
-          <Text fontSize={18}>{user.name}</Text>
-        </Center>
-      </ScrollView>
-      <ConfirmModal
-        isOpen={deleteIsOpen}
-        onClose={() => setDeleteIsOpen(false)}
-        callback={_deleteImage}
-        headerDesc='Delete profile picture?'
-        buttonDesc='Delete'
-      />
-    </>
+              >
+                Edit
+              </Button>
+              <Button
+                onPress={() => {
+                  if (!user.imageUrl) return;
+                  setDeleteIsOpen(true);
+                }}
+                leftIcon={<Icon as={MaterialCommunityIcons} name="delete" size="sm" />}
+                colorScheme='red'
+                flex={1}
+              >
+                Delete
+              </Button>
+            </HStack>
+            <Text fontSize={18}>{user.name}</Text>
+          </Center>
+        </ScrollView>
+        <ConfirmModal
+          isOpen={deleteIsOpen}
+          onClose={() => setDeleteIsOpen(false)}
+          callback={_deleteImage}
+          headerDesc='Delete profile picture?'
+          buttonDesc='Delete'
+        />
+      </>
+    </ImageBackground>
   );
 };
 

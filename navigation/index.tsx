@@ -1,4 +1,3 @@
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,7 +8,7 @@ import LoadingScreen from '../screens/LoadingScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import GamesScreen from '../screens/GamesScreen';
 import GameScreen from '../screens/GameScreen';
-import { DrawerActions } from '@react-navigation/routers';
+import ShopScreen from '../screens/ShopScreen';
 import { signOut, getAuth, onAuthStateChanged } from 'firebase/auth';
 
 import { RootStackParamList, HomeStackParamList, HomeStackScreenProps, RootDrawerParamList, RootStackScreenProps, RootDrawerScreenProps } from '../types';
@@ -17,7 +16,7 @@ import LinkingConfiguration from './LinkingConfiguration';
 import { Text } from 'native-base';
 import { useAppDispatch, useAppSelector } from '../hooks/selectorAndDispatch';
 import { setIsSignedIn } from '../redux/features/info';
-import { createLocalFileCache, setDefaultImageCache } from '../components';
+import { HamburgerButton, BackButton, createLocalFileCache, setDefaultImageCache } from '../components';
 
 const Navigation = ({ colorScheme }: { colorScheme?: ColorSchemeName }) => {
   return (
@@ -72,20 +71,8 @@ const HomeNavigator = () => {
       <HomeStack.Screen
         name="Games"
         component={GamesScreen}
-        options={({ navigation }: HomeStackScreenProps<'Games'>) => ({
-          headerLeft: () => (
-            <Pressable
-              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-              style={({ pressed }) => ({
-                opacity: pressed ? 0.5 : 1,
-                marginRight: 15
-              })}>
-              <Ionicons
-                name="md-menu"
-                size={25}
-              />
-            </Pressable>
-          ),
+        options={(navProps: HomeStackScreenProps<'Games'>) => ({
+          headerLeft: () => <HamburgerButton {...navProps} />,
           gestureEnabled: false
         })}
       />
@@ -94,19 +81,7 @@ const HomeNavigator = () => {
         component={GameScreen}
         options={({ navigation }: HomeStackScreenProps<'Game'>) => ({
           headerShown: false,
-          headerLeft: () => (
-            <Pressable
-              onPress={() => navigation.navigate('Games')}
-              style={({ pressed }) => ({
-                opacity: pressed ? 0.5 : 1,
-                marginRight: 15
-              })}>
-              <FontAwesome
-                name="chevron-left"
-                size={20}
-              />
-            </Pressable>
-          )
+          headerLeft: () => <BackButton onPress={() => navigation.navigate('Games')}/>
         })}
       />
     </HomeStack.Navigator>
@@ -134,9 +109,17 @@ function DrawerNavigator() {
         })}
       />
       <Drawer.Screen
+        name="Shop"
+        component={ShopScreen}
+        options={(navProps: RootDrawerScreenProps<'Shop'>) => ({
+          headerLeft: () => <HamburgerButton {...navProps} />
+        })}
+      />
+      <Drawer.Screen
         name="Settings"
         component={SettingsScreen}
-        options={({ navigation }: RootDrawerScreenProps<'Settings'>) => ({
+        options={(navProps: RootDrawerScreenProps<'Settings'>) => ({
+          headerLeft: () => <HamburgerButton {...navProps} />,
           headerRight: () => ( 
             <Pressable
               onPress={handleLogOut}
@@ -146,31 +129,11 @@ function DrawerNavigator() {
               })}>
               <Text color='red.500'>Log out</Text>
             </Pressable>
-          ),
-          headerLeft: () => (
-            <Pressable
-              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-              style={({ pressed }) => ({
-                opacity: pressed ? 0.5 : 1,
-                marginLeft: 15
-              })}>
-              <Ionicons
-                name="md-menu"
-                size={25}
-              />
-            </Pressable>
-          ),
+          )
         })}
       />
     </Drawer.Navigator>
   );
 };
-
-// function TabBarIcon(props: {
-//   name: React.ComponentProps<typeof FontAwesome>['name'];
-//   color: string;
-// }) {
-//   return <FontAwesome size={30} style={{ marginBottom: -3 }} {...props} />;
-// }
 
 export default Navigation;

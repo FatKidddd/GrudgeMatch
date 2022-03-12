@@ -1,5 +1,5 @@
 import { useAppDispatch, useAppSelector } from './selectorAndDispatch';
-import { getFirestore, doc, getDoc, DocumentReference, DocumentData } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, DocumentReference, DocumentData, onSnapshot } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { ActionCreatorWithPayload } from '@reduxjs/toolkit';
 import { setGolfCourse } from '../redux/features/golfCourses';
@@ -8,6 +8,7 @@ import { setUser } from '../redux/features/users';
 import { formatData } from '../utils/dateUtils';
 import { useIsMounted } from './common';
 import { Mutex } from 'async-mutex';
+import { User } from '../types';
 
 type UseFireGetProps<T> = {
   docRef: DocumentReference<DocumentData> | void;
@@ -118,6 +119,31 @@ export const useUser = (uid: string | void) => {
   });
 };
 
+export const useSnapshotUser = (uid: string | void) => {
+  const [user, setUser] = useState<User>();
+  const isMounted = useIsMounted();
+  const db = getFirestore();
+
+  useEffect(() => {
+    if (!uid) return;
+    const userRef = doc(db, 'users', uid);
+    const unsubscribe = onSnapshot(userRef, res => {
+      if (!isMounted.current) return;
+      const data = {
+        id: res.id,
+        ...res.data()
+      } as User;
+      console.log('user data', data);
+      setUser(data);
+    });
+    return () => {
+      console.log("unsubscribed user snapshot");
+      unsubscribe();
+    }
+  }, [uid]);
+
+  return user;
+};
 
 // export const useUserIds = (userIds: string[] | void) => {
   

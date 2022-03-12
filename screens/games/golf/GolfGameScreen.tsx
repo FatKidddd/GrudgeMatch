@@ -1,17 +1,17 @@
 import _ from 'lodash';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { getAuth } from 'firebase/auth';
-import { getFirestore, getDoc, collection, query, orderBy, limit, startAfter, onSnapshot, doc, getDocs, setDoc, updateDoc, arrayUnion, DocumentData, DocumentSnapshot } from 'firebase/firestore';
+import { getFirestore, getDoc, collection, query, orderBy, limit, startAfter, onSnapshot, doc, getDocs, setDoc, updateDoc, arrayUnion, DocumentData, DocumentSnapshot, increment } from 'firebase/firestore';
 import GolfRoomScreen from './GolfRoomScreen';
 import { Modal, Button, Input, VStack, Text, FormControl, Box, Center, AlertDialog, HStack, Link, FlatList, Spinner } from "native-base"
-import { GolfGame, HomeStackParamList, SavedRoom } from "../../../types";
+import { GolfGame, HomeStackParamList, SavedRoom, User } from "../../../types";
 import { TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import gamesData from "../../../gamesData";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAppDispatch, useAppSelector } from "../../../hooks/selectorAndDispatch";
 import { BackButton, Header, LoadingView, UsersBar } from "../../../components";
-import { useRoom, useUser, useGolfCourse } from '../../../hooks/useFireGet';
+import { useRoom, useUser, useGolfCourse, useSnapshotUser } from '../../../hooks/useFireGet';
 import { tryAsync, formatData, getBetScores, getColor, getColorType } from '../../../utils';
 import { addSavedRooms } from '../../../redux/features/gamesHistory';
 import { useIsMounted } from '../../../hooks/common';
@@ -24,38 +24,44 @@ const RoomModalButtons = () => {
   const [errorIsOpen, setErrorIsOpen] = useState(false);
   const [createOrJoin, setCreateOrJoin] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [submitIsLoading, setSubmitIsLoading] = useState(false);
   const cancelRef = useRef(null);
+
+  const userId = getAuth().currentUser?.uid;
+  const user = useSnapshotUser(userId);
 
   const db = getFirestore();
 
   const onClose = () => setErrorIsOpen(false);
+
   
   const handleRoomError = (message: string = 'Failed to create / join room') => {
     setErrorMessage(message);
     setErrorIsOpen(true);
+    setSubmitIsLoading(false);
   };
 
   const createRoomChecks = () => {
-    if (!(roomName.length > 0 && roomName.length < 30)) return false;
+    if (!(roomName.length > 0 && roomName.length < 50)) return false;
     if (password.length === 0) return false;
     return true;
-  }
+  };
 
   const handleCreateRoom = () => {
-    if (!createRoomChecks) return handleRoomError();
+    if (submitIsLoading) return;
+    setSubmitIsLoading(true);
+
+    if (!user || !userId || !roomName || !createRoomChecks()) return handleRoomError();
+
+    if (!(user.roomsLimit - (user.roomsUsed ? user.roomsUsed : 0) > 0)) return handleRoomError('You have no more rooms left! Go to the shop tab to buy more.');
 
     const roomRef = doc(db, 'rooms', roomName);
-
     // check for existing roomName
     getDoc(roomRef)
       .then(res => {
         if (res.exists()) return handleRoomError('Room already exists\nChoose another room name');
 
         // create room
-        const auth = getAuth();
-        const userId = auth.currentUser?.uid;
-        if (!userId) return handleRoomError();
-        
         const golfGame: GolfGame = {
           id: roomName,
           userIds: [],
@@ -73,28 +79,34 @@ const RoomModalButtons = () => {
 
         setDoc(roomRef, golfGame)
           .then(res => {
+            // maybe there memory leak here? lazy to fix now
             console.log("New room created");
             handleJoinRoom();
           })
           .catch(err => {
             console.error(err);
+            handleRoomError();
           });
       })
       .catch(err => {
         console.error(err);
+        handleRoomError();
       });
   };
 
   const handleJoinRoom = () => {
+    if (submitIsLoading) return;
+    setSubmitIsLoading(true);
+
+    if (!user || !userId || !roomName) return handleRoomError();
+
+    const userRef = doc(db, 'users', userId);
     const roomRef = doc(db, 'rooms', roomName);
-    const auth = getAuth();
-    const userId = auth.currentUser?.uid;
-    if (!userId) return handleRoomError();
 
     getDoc(roomRef)
       .then(async res => {
         const data = res.data();
-        if ((data?.userIds && data?.userIds.length < 8) && data?.password && data?.password === password) {
+        if ((data?.userIds && data?.userIds.length < 8) && (data?.password && data?.password === password)) {
           // update room
           await updateDoc(roomRef, {
             userIds: arrayUnion(userId),
@@ -102,9 +114,9 @@ const RoomModalButtons = () => {
           });
 
           // update user
-          const userRef = doc(db, 'users', userId);
           await updateDoc(userRef, {
-            [`roomNames.${'golf'}`]: roomName
+            [`roomNames.${'golf'}`]: roomName,
+            roomsUsed: increment(1)
           });
         } else {
           handleRoomError();
@@ -112,9 +124,11 @@ const RoomModalButtons = () => {
       })
       .catch(err => {
         console.error(err);
+        handleRoomError();
       });
   };
 
+  if (!user) return null;
   // add text limit
   return (
     <>
@@ -127,31 +141,37 @@ const RoomModalButtons = () => {
           <Modal.CloseButton />
           <Modal.Header>{createOrJoin ? 'Create room' : 'Join room'}</Modal.Header>
           <Modal.Body>
-            {createOrJoin ? 'You need to create a room for every golf course.' : null}
+            <Text fontWeight={'bold'}>Rooms Left: {user?.roomsLimit - (user?.roomsUsed ? user.roomsUsed : 0)}</Text>
+            <Text></Text>
+            {createOrJoin ? 'As the room creator, you decide which golf course to play.' : null}
             <FormControl mt="3">
               <FormControl.Label>Room Name</FormControl.Label>
               <Input value={roomName} onChangeText={val => setRoomName(val)} />
             </FormControl>
             <FormControl mt="3">
               <FormControl.Label>Password</FormControl.Label>
-              <Input
-                value={password}
-                onChangeText={val => setPassword(val)}
-                type={show ? "text" : "password"}
-                InputRightElement={
-                  <Button onPress={() => setShow(!show)}>
-                    <Ionicons size={20} name={!show ? "eye-outline" : "eye-off-outline"} color='#eeeeee'/>
-                  </Button>}
-              />
+              <Box>
+                <Input
+                  value={password}
+                  onChangeText={val => setPassword(val)}
+                  type={show ? "text" : "password"}
+                  InputRightElement={
+                    <Button onPress={() => setShow(!show)} height='100%'>
+                      <Ionicons size={20} name={!show ? "eye-outline" : "eye-off-outline"} color='#eeeeee'/>
+                    </Button>}
+                />
+              </Box>
             </FormControl>
           </Modal.Body>
           <Link onPress={() => setCreateOrJoin(!createOrJoin)} marginY="2" alignSelf="center" _text={{ color: "blue.400" }}>
             {createOrJoin ? "Join an existing room instead" : "Create a new room"}
           </Link>
           <Modal.Footer>
-            <Button flex="1" onPress={createOrJoin ? handleCreateRoom : handleJoinRoom}>
-              {createOrJoin ? 'Create' : 'Join'}
-            </Button>
+            <LoadingView isLoading={submitIsLoading}>
+              <Button onPress={createOrJoin ? handleCreateRoom : handleJoinRoom}>
+                {createOrJoin ? 'Create' : 'Join'}
+              </Button>
+            </LoadingView>
           </Modal.Footer>
         </Modal.Content>
       </Modal>
@@ -163,7 +183,8 @@ const RoomModalButtons = () => {
       >
         <AlertDialog.Content>
           <AlertDialog.CloseButton />
-          <AlertDialog.Header>{errorMessage}</AlertDialog.Header>
+          <AlertDialog.Header>Error</AlertDialog.Header>
+          <AlertDialog.Body>{errorMessage}</AlertDialog.Body>
           <AlertDialog.Footer>
             <Button.Group space={2}>
               <Button

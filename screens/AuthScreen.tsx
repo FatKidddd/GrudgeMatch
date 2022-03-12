@@ -9,8 +9,11 @@ import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { TouchableOpacity } from 'react-native';
 import { GoogleSvg } from '../components';
 
+const NO_OF_FREE_ROOMS = 5;
+
 WebBrowser.maybeCompleteAuthSession();
 // both login and registration
+
 const AuthScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -80,7 +83,9 @@ const AuthScreen = () => {
               if (!res.exists()) {
                 setDoc(userRef, {
                   name: result.user.displayName,
-                  roomNames: {}
+                  roomNames: {},
+                  roomsLimit: NO_OF_FREE_ROOMS,
+                  roomsUsed: 0
                 });
               }
             });
@@ -118,7 +123,9 @@ const AuthScreen = () => {
         const userRef = doc(db, 'users', userCredentials.user.uid);
         setDoc(userRef, {
           name: username,
-          roomNames: {}
+          roomNames: {},
+          roomsLimit: NO_OF_FREE_ROOMS,
+          roomsUsed: 0
         })
           .then(res => console.log("Set required info on new user creation"))
           .catch(err => console.error(err));
@@ -190,7 +197,7 @@ const AuthScreen = () => {
               value={password}
               onChangeText={newPassword => setPassword(newPassword)}
               InputRightElement={
-                <Button onPress={() => setHide(!hide)}>
+                <Button onPress={() => setHide(!hide)} height='100%'>
                   <Ionicons size={20} name={hide ? "eye-outline" : "eye-off-outline"} color='#eeeeee'/>
                 </Button>}
             />

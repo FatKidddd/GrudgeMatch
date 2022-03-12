@@ -22,7 +22,7 @@ const linking: LinkingOptions<RootStackParamList> = {
               Game: 'game'
             },
           },
-          //Profile: 'profile',
+          Shop: 'shop',
           Settings: 'settings'
         },
       },

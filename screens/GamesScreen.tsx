@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { HomeStackScreenProps } from '../types';
 import { Box, FlatList, Heading, HStack, Image, Pressable, Text } from 'native-base';
 import gamesData, { GameDataType, GamesDataType } from '../gamesData';

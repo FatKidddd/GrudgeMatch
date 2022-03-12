@@ -130,7 +130,7 @@ const GolfCourseList = ({ userId, roomName, room, golfCoursesRef }: GolfCourseLi
     updateDoc(doc(db, 'rooms', roomName), {
       golfCourseId: selectedCourseId
     })
-      .then(res => console.log("Course selected"))
+      // .then(res => console.log("Course selected"))
       .catch(err => console.error(err));
   };
 
@@ -476,6 +476,7 @@ const HandicapRow = React.memo(({ userId, oppUid, room, roomName, renderBackCoun
 
 const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => {
   const [course, courseIsLoading] = useGolfCourse(room.golfCourseId);
+  const isMounted = useIsMounted();
   const renderBackCount = course ? course?.parArr.length > 9 : true;
 
   const handleStart = () => {
@@ -495,6 +496,7 @@ const GolfHandicapScreen = ({ userId, roomName, room }: GolfPrepScreenProps) => 
       prepDone: true
     })
       .then(res => {
+        if (!isMounted.current) return;
         console.log("Prep done");
       })
       .catch(err => {

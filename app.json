@@ -37,7 +37,13 @@
       },
       "package": "com.fatkid.grudgematch",
       "softwareKeyboardLayoutMode": "pan",
-      "permissions": ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "READ_PHONE_STATE"]
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_PHONE_STATE",
+        "BILLING"
+      ],
+      "versionCode": 2
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
