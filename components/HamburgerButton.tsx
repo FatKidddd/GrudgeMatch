@@ -3,13 +3,16 @@ import { Pressable } from "react-native";
 import { DrawerActions } from "@react-navigation/routers";
 import { Ionicons } from "@expo/vector-icons";
 
-const HamburgerButton = ({ navigation }: HomeStackScreenProps<'Games'> | RootDrawerScreenProps<'Shop' | 'Settings'>) => {
+type HamburgerButtonProps = (HomeStackScreenProps<'Games'> | RootDrawerScreenProps<'Shop' | 'Settings'>) & { isGamesScreen?: boolean };
+
+const HamburgerButton = ({ navigation, isGamesScreen }: HamburgerButtonProps) => {
   return (
     <Pressable
       onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
       style={({ pressed }) => ({
         opacity: pressed ? 0.5 : 1,
-        marginHorizontal: 15
+        marginHorizontal: isGamesScreen ? 0 : 15,
+        marginRight: isGamesScreen ? 15 : 0
       })}>
       <Ionicons
         name="md-menu"

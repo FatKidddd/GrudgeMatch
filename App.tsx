@@ -12,20 +12,19 @@ import { initializeApp } from "firebase/app";
 // import { getReactNativePersistence } from 'firebase/auth/react-native';
 import { SSRProvider } from '@react-aria/ssr';
 import { initializeFirestore } from "firebase/firestore"; 
-// @ts-ignore
-import { connectToDevTools } from "react-devtools-core";
 import * as Sentry from 'sentry-expo';
 
 import Purchases from 'react-native-purchases';
 
 LogBox.ignoreLogs(['Setting a timer for a long period of time'])
 
-if (__DEV__) {
-  connectToDevTools({
-    host: "localhost",
-    port: 8097,
-  });
-}
+// import { connectToDevTools } from "react-devtools-core";
+// if (__DEV__) {
+//   connectToDevTools({
+//     host: "localhost",
+//     port: 8097,
+//   });
+// }
 
 
 Sentry.init({

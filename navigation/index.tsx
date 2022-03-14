@@ -72,7 +72,7 @@ const HomeNavigator = () => {
         name="Games"
         component={GamesScreen}
         options={(navProps: HomeStackScreenProps<'Games'>) => ({
-          headerLeft: () => <HamburgerButton {...navProps} />,
+          headerLeft: () => <HamburgerButton {...navProps} isGamesScreen={true} />,
           gestureEnabled: false
         })}
       />

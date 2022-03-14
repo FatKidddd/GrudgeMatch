@@ -63,6 +63,7 @@ const useFireGet = <T,>({ docRef, items, itemId, toDispatch, textLog, altDocRef 
   };
 
   useEffect(() => {
+    if (!isMounted.current) return;
     getData();
     return () => mutex?.cancel();
   }, [itemId, items]);
@@ -144,9 +145,5 @@ export const useSnapshotUser = (uid: string | void) => {
 
   return user;
 };
-
-// export const useUserIds = (userIds: string[] | void) => {
-  
-// };
 
 export default useFireGet;

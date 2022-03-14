@@ -20,12 +20,12 @@ interface PackageItemProps {
 };
 
 const mapIds: { [key: string]: number } = {
-  "small_room_bundle": 3,
-  "medium_room_bundle": 20,
+  "small_room_bundle": 5,
+  "medium_room_bundle": 18,
   "large_room_bundle": 45
 };
 
-const FREE_ROOMS_LIMIT = 5;
+const FREE_ROOMS_LIMIT = 8;
 
 const handlePurchase = async (purchaserInfo: PurchaserInfo, uid: string) => {
   let finalRoomsLimit = FREE_ROOMS_LIMIT;

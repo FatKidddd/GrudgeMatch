@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "GrudgeMatch",
+    "name": "GrudgeGame",
     "platforms": [
       "ios",
       "android",
@@ -28,7 +28,8 @@
       "bundleIdentifier": "com.fatkid.grudgematch",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Granting access allows you to upload your own profile picture."
-      }
+      },
+      "buildNumber": "3"
     },
     "android": {
       "adaptiveIcon": {

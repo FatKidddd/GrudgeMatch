@@ -9,7 +9,7 @@ import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { TouchableOpacity } from 'react-native';
 import { GoogleSvg } from '../components';
 
-const NO_OF_FREE_ROOMS = 5;
+const NO_OF_FREE_ROOMS = 8;
 
 WebBrowser.maybeCompleteAuthSession();
 // both login and registration
