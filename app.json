@@ -29,7 +29,7 @@
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Granting access allows you to upload your own profile picture."
       },
-      "buildNumber": "3"
+      "buildNumber": "4"
     },
     "android": {
       "adaptiveIcon": {
@@ -44,7 +44,7 @@
         "READ_PHONE_STATE",
         "BILLING"
       ],
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
