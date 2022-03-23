@@ -106,7 +106,7 @@ const RoomModalButtons = () => {
     getDoc(roomRef)
       .then(async res => {
         const data = res.data();
-        if ((data?.userIds && data?.userIds.length < 8) && (data?.password && data?.password === password)) {
+        if ((data?.userIds && data?.userIds.length < 8) && (data?.password && data?.password === password) && !data.prepDone) {
           // update room
           await updateDoc(roomRef, {
             userIds: arrayUnion(userId),
