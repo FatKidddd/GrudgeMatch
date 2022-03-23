@@ -113,7 +113,7 @@ const usePurchases = () => {
     (async () => {
       Purchases.setDebugLogsEnabled(true);
       if (Platform.OS === 'ios') {
-        await Purchases.setup("public_ios_sdk_key");
+        await Purchases.setup("appl_TCecRMmBIWTliKafwPvjVJxZFIf");
       } else if (Platform.OS === 'android') {
         await Purchases.setup("goog_RmsPfLAzUwRclxkDyPKZyrpJDTK");
         // // OR: if building for Amazon, be sure to follow the installation instructions then:
