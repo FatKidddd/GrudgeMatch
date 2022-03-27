@@ -5414,6 +5414,13 @@
     "@expo/config-plugins" "^4.0.2"
     "invariant" "^2.2.4"
 
+"expo-apple-authentication@~4.1.0":
+  "integrity" "sha512-HSAM3picVMaqKOf3pf69TD/I+k+RY3C2HiRzt9b/zla3VsyN8lLDIVeA/vbq5MQkqQ6JwBG9EKECmBWJ3mSvug=="
+  "resolved" "https://registry.npmjs.org/expo-apple-authentication/-/expo-apple-authentication-4.1.0.tgz"
+  "version" "4.1.0"
+  dependencies:
+    "@expo/config-plugins" "^4.0.2"
+
 "expo-application@*", "expo-application@~4.0.1", "expo-application@~4.0.2":
   "integrity" "sha512-ngTaFplTkWn0X45gMC+VNXGyJfGxX4wOwKmtr17rNMVWOQUhhLlyMkTj9bAamzsuwZh35l3S/eD/N1aMWWUwMw=="
   "resolved" "https://registry.npmjs.org/expo-application/-/expo-application-4.0.2.tgz"
@@ -9161,10 +9168,10 @@
     "lodash" "^4.17.21"
     "prop-types" "^15.7.2"
 
-"react-native-purchases@^4.5.2":
-  "integrity" "sha512-kmWqyIEMmpI3SuJD5+bK8yLMmXohLzqPkkOZ5x/u3JpuqqHiVRAc4OD53YVtQvVjOMlsCWHkXMU4i6WBlo3aRQ=="
-  "resolved" "https://registry.npmjs.org/react-native-purchases/-/react-native-purchases-4.5.2.tgz"
-  "version" "4.5.2"
+"react-native-purchases@^4.5.3":
+  "integrity" "sha512-eG2FtcTTirkRau2SPBLdGS2i0/ev2UpNOFAKPZDLdUXORipitoUA1kw4+3JM+oo5PFUM97za8M4ztCqTLFUOgg=="
+  "resolved" "https://registry.npmjs.org/react-native-purchases/-/react-native-purchases-4.5.3.tgz"
+  "version" "4.5.3"
 
 "react-native-reanimated@>= 1.0.0", "react-native-reanimated@~2.3.1":
   "integrity" "sha512-nzjVqwkB8eeyPKT2KoiA9EEz17ZMFSGMoOTC17Z9b5nE2Z4ZHjHM5EKhY0TlwzXFUuJAE9PhOfxF0wIO/maZSA=="

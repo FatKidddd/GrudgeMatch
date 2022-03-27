@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Icon, Text, ScrollView, Center, Button, HStack, Switch, useColorMode, Spinner } from 'native-base';
+import { Input, Icon, Text, ScrollView, Center, Button, HStack, Switch, useColorMode, Spinner } from 'native-base';
 import { RootDrawerScreenProps } from '../types';
 import * as ImagePicker from "expo-image-picker";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject,  } from "firebase/storage";
-import { ImageBackground, LogBox, Platform } from "react-native";
+import { ImageBackground, LogBox, Platform, TouchableOpacity } from "react-native";
 // import uuid from "react-native-uuid";
 import { getAuth } from 'firebase/auth';
 import { updateDoc, getFirestore, doc, deleteField } from 'firebase/firestore';
@@ -27,6 +27,12 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
   const isMounted = useIsMounted();
   const dispatch = useAppDispatch();
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+
+  useEffect(() => {
+    setNewUsername(user?.name ? user.name : '');
+  }, [user]);
   // Firebase sets some timers for a long period, which will trigger some warnings. Let's turn that off for 
   LogBox.ignoreLogs([`Setting a timer for a long period`]);
 
@@ -157,6 +163,23 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
     }
   };
 
+  const toggleIsEditing = () => setIsEditing(!isEditing);
+
+  const changeUsername = () => {
+    updateDoc(userRef, {
+      name: newUsername
+    })
+      .then(res => {
+        if (!isMounted.current) return;
+        setIsEditing(false);
+        dispatch(deleteUser(user.id));
+      })
+      .catch(err => {
+        console.log("Failed to update username");
+        console.error(err)
+      });
+  };
+
   // const avatarProps = {
   //   key: user.id,
   //   size: "2xl"
@@ -202,7 +225,23 @@ const SettingsScreen = ({}: RootDrawerScreenProps<'Settings'>) => {
                 Delete
               </Button>
             </HStack>
-            <Text fontSize={18}>{user.name}</Text>
+            <HStack alignItems={'center'} space={3}>
+                <Input
+                  value={newUsername}
+                  onChangeText={(text) => setNewUsername(text)}
+                  textAlign={'center'}
+                  fontSize={18}
+                  editable={isEditing}
+                  borderWidth={isEditing ? 1 : 0}
+                />
+              <TouchableOpacity onPress={toggleIsEditing}>
+                <Icon as={MaterialCommunityIcons} name="pencil" size="sm" color={"black"} />
+              </TouchableOpacity>
+              {isEditing &&
+                <TouchableOpacity onPress={changeUsername}>
+                  <Icon as={MaterialCommunityIcons} name="check" size="sm" color={"black"} />
+                </TouchableOpacity>}
+            </HStack>
           </Center>
         </ScrollView>
         <ConfirmModal

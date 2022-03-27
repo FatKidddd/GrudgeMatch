@@ -4,10 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { ResponseType } from 'expo-auth-session';
 import * as Google from 'expo-auth-session/providers/google';
-import { GoogleAuthProvider, onAuthStateChanged, signInWithCredential, getAuth, createUserWithEmailAndPassword, updateProfile, User, signInWithEmailAndPassword } from 'firebase/auth';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { OAuthProvider, GoogleAuthProvider, onAuthStateChanged, signInWithCredential, getAuth, createUserWithEmailAndPassword, updateProfile, User, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
-import { TouchableOpacity } from 'react-native';
+import { Platform, TouchableOpacity } from 'react-native';
 import { GoogleSvg } from '../components';
+import * as Crypto from 'expo-crypto';
 
 const NO_OF_FREE_ROOMS = 8;
 
@@ -71,7 +73,6 @@ const AuthScreen = () => {
       // onSignIn(response);
       const { id_token } = response.params;
       
-      const auth = getAuth();
       const credential = GoogleAuthProvider.credential(id_token);
       signInWithCredential(auth, credential)
         .then((result) => {
@@ -113,6 +114,50 @@ const AuthScreen = () => {
     if (isLoading) return;
     setIsLoading(true);
     promptAsync();
+  };
+
+  const signInWithApple = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    try {
+      const nonce = Math.random().toString(36).substring(2, 10);
+      const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, nonce);
+      const appleCredential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL
+        ],
+        nonce: hashedNonce
+      });
+      const { identityToken } = appleCredential;
+      const provider = new OAuthProvider('apple.com');
+      const credential = provider.credential({
+        idToken: identityToken!,
+        rawNonce: nonce
+      });
+      const result = await signInWithCredential(auth, credential);
+      console.log('User signed in');
+
+      const userRef = doc(db, 'users', result.user.uid);
+      const res = await getDoc(userRef);
+      if (!res.exists()) {
+        setDoc(userRef, {
+          name: appleCredential.fullName?.givenName ?appleCredential.fullName?.givenName : 'Anonymous',
+          roomNames: {},
+          roomsLimit: NO_OF_FREE_ROOMS,
+          roomsUsed: 0
+        });
+      }
+    } catch (e: any) {
+      if (e.code === 'ERR_CANCELED') {
+        // handle that the user canceled the sign-in flow
+      } else {
+        // handle other errors
+        handleFailed('Sign in with Apple was unsuccessful.');
+        console.error(e);
+      }
+      setIsLoading(false);
+    }
   };
 
   const handleSignUp = () => {
@@ -220,14 +265,24 @@ const AuthScreen = () => {
               : <Button mt="2" onPress={handleSubmit}>
                 {isRegister ? 'Sign up' : 'Sign in'}
               </Button>}
-            <HStack justifyContent={'space-between'} alignItems={'center'} marginTop={3}>
-              <Text>Sign in with Google</Text>
               {isLoading
                 ? <Spinner size="lg" />
-                : <TouchableOpacity onPress={signInWithGoogle}>
-                  <GoogleSvg />
-                </TouchableOpacity>}
-            </HStack>
+                : <VStack space={2} alignItems='center' mt={3}>
+                  <HStack justifyContent={'space-between'} alignItems={'center'} space={2}>
+                    <Text>Sign in with Google</Text>
+                    <TouchableOpacity onPress={signInWithGoogle}>
+                      <GoogleSvg />
+                    </TouchableOpacity>
+                  </HStack>
+                  {Platform.OS === 'ios' &&
+                    <AppleAuthentication.AppleAuthenticationButton
+                      buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                      buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                      cornerRadius={5}
+                      style={{ width: 200, height: 44 }}
+                      onPress={signInWithApple}
+                    />}
+                </VStack>}
             <HStack mt="6" justifyContent="center">
               <Link
                 _text={{
