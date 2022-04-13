@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, ImageBackground, TouchableOpacity } from 'react-native';
+import { Alert, ImageBackground, Platform, TouchableOpacity } from 'react-native';
 import { Text, FlatList, Box, Center, HStack, Spinner, VStack, ScrollView, Button } from 'native-base';
 import Purchases, { PurchaserInfo, PurchasesPackage } from 'react-native-purchases';
 import { doc, getDoc, getFirestore, increment, updateDoc } from 'firebase/firestore';
@@ -25,6 +25,12 @@ const mapIds: { [key: string]: number } = {
   "large_room_bundle": 45
 };
 
+const mapName: { [key: string]: string } = {
+  "small_room_bundle": "Small",
+  "medium_room_bundle": "Medium",
+  "large_room_bundle": "Large"
+};
+
 const FREE_ROOMS_LIMIT = 8;
 
 const handlePurchase = async (purchaserInfo: PurchaserInfo, uid: string) => {
@@ -44,7 +50,12 @@ const handlePurchase = async (purchaserInfo: PurchaserInfo, uid: string) => {
 };
 
 const PackageItem = ({ purchasePackage, setIsPurchasing, uid, user }: PackageItemProps) => {
-  const { product: { title, description, price_string }, } = purchasePackage;
+  let { product: { title, description, price_string }, } = purchasePackage;
+  const productId = purchasePackage.product.identifier;
+  if (Platform.OS === 'ios') {
+    title = mapName[productId] + ' Room Bundle';
+    description = 'Purchase ' + mapIds[productId].toString() + ' rooms';
+  }
 
   // const navigation = useNavigation();
 
@@ -148,11 +159,14 @@ const ShopScreen = () => {
 
   // - State for displaying an overlay view
 
+  // const [dummy, setDummy] = useState('');
+
   useEffect(() => {
     // Get current available packages
     (async () => {
       try {
         const offerings = await Purchases.getOfferings();
+        // setDummy(JSON.stringify(offerings));
         if (offerings.current !== null && offerings.current.availablePackages.length !== 0) {
           setPackages(offerings.current.availablePackages);
           setServerDescription(offerings.current.serverDescription);
@@ -182,13 +196,14 @@ const ShopScreen = () => {
       imageStyle={{ opacity: 0.4 }}
     // blurRadius={10}
     >
+      {/* <Text>{dummy}</Text> */}
       <Center flex={1}>
         <LoadingView isLoading={isPurchasing} marginTop={3}>
         {/* <Text alignSelf={'center'} fontSize={18} fontWeight='bold' marginY={3}>Buy more rooms here</Text> */}
-        <HStack justifyContent={'space-between'} marginX={3} alignItems='center'>
-          <Text fontSize={16} fontWeight='bold'>Rooms Left: {user.roomsLimit - (user?.roomsUsed ? user.roomsUsed : 0)}</Text>
-          <Restore uid={uid} setIsPurchasing={setIsPurchasing} />
-        </HStack>
+          <HStack justifyContent={'space-between'} marginX={3} alignItems='center'>
+            <Text fontSize={16} fontWeight='bold'>Rooms Left: {user.roomsLimit - (user?.roomsUsed ? user.roomsUsed : 0)}</Text>
+            <Restore uid={uid} setIsPurchasing={setIsPurchasing} />
+          </HStack>
           <Center>
             <Box rounded={20} padding={3} width='95%'>
               <Text fontSize={20} alignSelf='flex-start' margin={3} fontWeight='bold'>Bundles</Text>
